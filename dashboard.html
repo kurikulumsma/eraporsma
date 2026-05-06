@@ -1,0 +1,1333 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard e-Rapor SMA v6</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+/* ============================================================ RESET & VARS */
+:root {
+  --blue-900:#0D2B6E; --blue-800:#1338A8; --blue-700:#1565C0;
+  --blue-600:#1976D2; --blue-500:#2196F3; --blue-400:#42A5F5;
+  --blue-100:#E3F2FD; --blue-50:#F0F7FF;
+  --orange:#F57C00; --orange-l:#FFF3E0;
+  --green:#2E7D32; --green-l:#E8F5E9;
+  --red:#C62828; --red-l:#FFEBEE;
+  --purple:#6A1B9A; --purple-l:#F3E5F5;
+  --text-900:#0F1923; --text-600:#374151; --text-400:#6B7280; --text-300:#9CA3AF;
+  --bg:#F4F7FB; --card:#FFFFFF;
+  --radius:16px; --radius-sm:10px;
+  --sidebar-w:232px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text-900);min-height:100vh;font-size:14px;}
+
+/* ===== LOADING ===== */
+#loading-screen{
+  position:fixed;inset:0;z-index:9999;
+  background:rgba(255,255,255,0.65);
+  backdrop-filter:blur(6px);
+  -webkit-backdrop-filter:blur(6px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px;
+  transition:opacity .5s ease,visibility .5s ease;
+}
+#loading-screen.hide{opacity:0;visibility:hidden;pointer-events:none;}
+.ls-logo{display:flex;flex-direction:column;align-items:center;gap:14px;}
+.ls-logo-img{width:120px;height:auto;filter:drop-shadow(0 2px 8px rgba(0,0,0,.12));}
+.ls-logo-name{color:var(--blue-900);font-size:20px;font-weight:800;letter-spacing:-.5px;}
+.ls-logo-sub{color:var(--text-400);font-size:12px;text-align:center;margin-top:2px;}
+.ls-bar-wrap{width:280px;}
+.ls-bar-track{height:6px;background:rgba(0,0,0,.08);border-radius:99px;overflow:hidden;position:relative;}
+.ls-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue-700),var(--blue-400));border-radius:99px;width:0%;transition:width .4s cubic-bezier(.4,0,.2,1);position:relative;}
+/* Efek cahaya berjalan di atas bar */
+.ls-bar-fill::after{
+  content:'';position:absolute;top:0;left:0;width:100%;height:100%;
+  background:linear-gradient(90deg,transparent 0%,transparent 20%,rgba(255,255,255,.6) 50%,transparent 80%,transparent 100%);
+  animation:ls-shimmer 1.6s ease-in-out infinite;border-radius:99px;
+}
+@keyframes ls-shimmer{0%{transform:translateX(-100%);}100%{transform:translateX(100%);}}
+.ls-bar-foot{display:flex;justify-content:space-between;margin-top:7px;}
+.ls-status-txt{color:var(--text-400);font-size:12px;}
+.ls-pct{color:var(--blue-800);font-size:12px;font-weight:700;}
+
+/* ===== LAYOUT ===== */
+.layout{display:flex;min-height:100vh;}
+
+/* ===== SIDEBAR ===== */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;background:var(--blue-900);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:200;
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+}
+.sidebar-header{padding:18px 16px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sidebar-brand{display:flex;align-items:center;gap:10px;}
+.sidebar-brand-logo{width:72px;height:auto;opacity:.92;flex-shrink:0;}
+.sidebar-brand-text{color:white;font-size:13px;font-weight:800;line-height:1.2;letter-spacing:-.3px;}
+.sidebar-brand-sub{color:rgba(255,255,255,.4);font-size:10px;margin-top:2px;}
+.sidebar-nav{padding:14px 10px;flex:1;}
+.nav-label{color:rgba(255,255,255,.3);font-size:10px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;padding:6px 10px 6px;}
+.nav-item{
+  display:flex;align-items:center;gap:9px;
+  padding:10px 12px;border-radius:10px;
+  color:rgba(255,255,255,.58);cursor:pointer;
+  font-size:13px;font-weight:500;
+  transition:all .2s;margin-bottom:2px;user-select:none;
+}
+.nav-item:hover{background:rgba(255,255,255,.07);color:white;}
+.nav-item.active{background:var(--blue-500);color:white;font-weight:600;}
+.nav-item svg{opacity:.65;flex-shrink:0;transition:opacity .2s;}
+.nav-item.active svg,.nav-item:hover svg{opacity:1;}
+.sidebar-footer{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.35);font-size:11px;line-height:1.6;}
+#last-updated{color:rgba(255,255,255,.6);font-weight:600;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;opacity:0;transition:opacity .3s;}
+.sidebar-overlay.show{opacity:1;}
+
+/* ===== MAIN ===== */
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.topbar{
+  background:white;padding:11px 22px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid #F1F5F9;
+  position:sticky;top:0;z-index:50;gap:12px;
+}
+.topbar-left{display:flex;align-items:center;gap:10px;}
+.hamburger-btn{display:none;width:34px;height:34px;border-radius:8px;background:var(--bg);border:none;align-items:center;justify-content:center;cursor:pointer;transition:background .2s;flex-shrink:0;}
+.hamburger-btn:hover{background:var(--blue-100);}
+.topbar-title{font-size:16px;font-weight:700;color:var(--text-900);}
+.topbar-sub{font-size:11px;color:var(--text-400);margin-top:1px;}
+.topbar-right{display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.period-badge{display:none;align-items:center;gap:5px;padding:5px 10px;border-radius:7px;background:var(--blue-50);border:1px solid var(--blue-100);font-size:11px;font-weight:600;color:var(--blue-700);}
+.refresh-btn{display:flex;align-items:center;gap:5px;padding:7px 13px;border-radius:8px;background:var(--blue-50);color:var(--blue-700);font-size:12px;font-weight:600;cursor:pointer;border:none;font-family:inherit;transition:background .2s;}
+.refresh-btn:hover{background:var(--blue-100);}
+.refresh-btn.spinning .spin-icon{animation:spin 1s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ===== PAGES ===== */
+.page{display:none;padding:20px 22px;}
+.page.active{display:block;}
+
+/* ===== FILTER BAR ===== */
+.filter-bar{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap;}
+.filter-bar-label{font-size:12px;font-weight:600;color:var(--text-400);white-space:nowrap;}
+.fb-select{padding:7px 11px;border-radius:8px;background:white;border:1.5px solid #E5E7EB;font-family:inherit;font-size:12px;color:var(--text-900);outline:none;cursor:pointer;transition:border-color .2s;min-width:148px;}
+.fb-select:focus{border-color:var(--blue-400);}
+.fb-reset{padding:6px 11px;border-radius:8px;background:var(--bg);border:none;font-size:12px;font-weight:600;color:var(--text-400);cursor:pointer;font-family:inherit;transition:all .15s;display:none;}
+.fb-reset.visible{display:block;}
+.fb-reset:hover{background:var(--blue-100);color:var(--blue-700);}
+.fb-info{font-size:11px;color:var(--blue-700);font-weight:600;background:var(--blue-50);padding:5px 10px;border-radius:6px;display:none;}
+.fb-info.visible{display:block;}
+
+/* ===== SUMMARY CARDS ===== */
+.cards-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
+.sum-card{border-radius:var(--radius);padding:15px 16px;display:flex;align-items:center;gap:13px;overflow:hidden;transition:transform .2s;}
+.sum-card:hover{transform:translateY(-1px);}
+.sum-card.total {background:linear-gradient(135deg,#1338A8 0%,#2196F3 100%);}
+.sum-card.used  {background:linear-gradient(135deg,#E65100 0%,#FF9800 100%);}
+.sum-card.notyet{background:linear-gradient(135deg,#37474F 0%,#78909C 100%);}
+.sum-ring{flex-shrink:0;position:relative;width:60px;height:60px;}
+.sum-ring svg{display:block;}
+.sum-ring-lbl{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white;letter-spacing:-.3px;line-height:1;}
+.sum-card-data{flex:1;min-width:0;}
+.sum-card-label{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.9px;color:rgba(255,255,255,.68);margin-bottom:3px;}
+.sum-card-value{font-size:25px;font-weight:800;line-height:1;letter-spacing:-1px;color:white;}
+.sum-card-sub{font-size:10px;color:rgba(255,255,255,.58);margin-top:3px;}
+
+/* row highlight saat search */
+tr.row-highlight td{background:#FFFBEB!important;}
+tr.row-highlight td.nama{color:#92400E!important;}
+
+/* ===== CHART CARDS ===== */
+.charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:18px;}
+.chart-card{background:var(--card);border-radius:var(--radius);padding:16px;}
+.chart-card.c2{grid-column:span 2;}
+.chart-card.c3{grid-column:span 3;}
+.chart-title{font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:2px;}
+.chart-sub{font-size:11px;color:var(--text-400);margin-bottom:12px;}
+.chart-wrap canvas{max-height:210px;}
+.prov-chart-wrap{height:320px;}
+
+/* Badge waktu daftar di tabel */
+.ts-badge{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:4px 9px;border-radius:7px;
+  background:var(--blue-50);border:1px solid var(--blue-100);
+  font-size:11px;font-weight:600;color:var(--blue-700);
+  white-space:nowrap;
+}
+
+/* ===== TABEL UMUM ===== */
+.table-card{background:var(--card);border-radius:var(--radius);margin-bottom:18px;overflow:hidden;}
+.t-head-row{padding:15px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+.t-title{font-size:13px;font-weight:700;color:var(--text-900);}
+.t-count{font-size:11px;color:var(--text-400);margin-top:2px;}
+.t-filters{display:flex;gap:8px;flex-wrap:wrap;padding:11px 16px;align-items:center;}
+.filter-input,.filter-select{padding:7px 11px;border-radius:8px;background:var(--bg);border:1.5px solid #E5E7EB;font-family:inherit;font-size:12px;color:var(--text-900);outline:none;transition:border-color .2s,background .2s;}
+.filter-input{min-width:180px;}
+.filter-input:focus,.filter-select:focus{background:white;border-color:var(--blue-400);}
+.filter-input::placeholder{color:var(--text-300);}
+.table-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead th{background:var(--bg);padding:8px 13px;text-align:left;font-size:10px;font-weight:700;color:var(--text-400);text-transform:uppercase;letter-spacing:.6px;white-space:nowrap;}
+tbody tr{border-top:1px solid #F1F5F9;transition:background .15s;}
+tbody tr:hover{background:var(--blue-50);}
+tbody td{padding:10px 13px;color:var(--text-600);vertical-align:middle;}
+tbody td.npsn{font-family:monospace;font-weight:600;color:var(--text-900);font-size:12px;}
+tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:99px;font-size:10px;font-weight:700;}
+.badge.negeri{background:var(--blue-100);color:var(--blue-700);}
+.badge.swasta{background:var(--orange-l);color:var(--orange);}
+.badge.v2025{background:var(--green-l);color:var(--green);}
+.badge.v232{background:var(--purple-l);color:var(--purple);}
+.badge.other{background:#F3F4F6;color:var(--text-400);}
+.t-pagination{padding:11px 16px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid #F1F5F9;gap:10px;flex-wrap:wrap;}
+.page-info{font-size:11px;color:var(--text-400);}
+.page-btns{display:flex;gap:3px;}
+.page-btn{min-width:29px;height:29px;border-radius:6px;border:none;background:var(--bg);color:var(--text-600);font-family:inherit;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;}
+.page-btn:hover{background:var(--blue-100);color:var(--blue-700);}
+.page-btn.active{background:var(--blue-600);color:white;}
+.page-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+/* ===== EMPTY ===== */
+.empty{padding:36px 20px;text-align:center;color:var(--text-400);font-size:13px;}
+.empty-icon{display:flex;justify-content:center;margin-bottom:10px;opacity:.3;}
+
+/* ===== EKSPLORASI ===== */
+.eksp-search-wrap{display:flex;gap:8px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
+.eksp-search{flex:1;min-width:180px;max-width:300px;padding:9px 13px;border-radius:10px;background:white;border:1.5px solid #E5E7EB;font-family:inherit;font-size:13px;color:var(--text-900);outline:none;transition:border-color .2s;}
+.eksp-search:focus{border-color:var(--blue-400);}
+.eksp-search::placeholder{color:var(--text-300);}
+.eksp-search-btn{padding:9px 15px;border-radius:10px;border:none;background:var(--blue-600);color:white;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.eksp-search-btn:hover{background:var(--blue-700);}
+.eksp-search-info{font-size:12px;color:var(--text-400);align-self:center;}
+.eksp-search-info.found{color:var(--green);font-weight:600;}
+.eksp-search-info.notfound{color:var(--red);}
+
+/* Breadcrumb */
+.breadcrumb{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-bottom:14px;}
+.bc-btn{font-size:13px;font-weight:600;color:var(--blue-600);cursor:pointer;padding:3px 0;border:none;background:none;font-family:inherit;transition:color .15s;}
+.bc-btn:hover{color:var(--blue-800);text-decoration:underline;}
+.bc-cur{font-size:13px;font-weight:700;color:var(--text-900);}
+.bc-sep{color:var(--text-300);font-size:13px;}
+
+/* Eksplorasi level card */
+.eksp-card{background:var(--card);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
+.eksp-card-header{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #F1F5F9;gap:12px;flex-wrap:wrap;}
+.eksp-card-title{font-size:13px;font-weight:700;color:var(--text-900);}
+.eksp-card-sub{font-size:11px;color:var(--text-400);margin-top:2px;}
+.eksp-stats{display:flex;gap:12px;align-items:center;flex-shrink:0;}
+.eksp-stat{text-align:center;}
+.eksp-stat-val{font-size:15px;font-weight:800;line-height:1;}
+.eksp-stat-val.g{color:var(--green);}
+.eksp-stat-val.r{color:var(--red);}
+.eksp-stat-val.b{color:var(--blue-700);}
+.eksp-stat-label{font-size:10px;color:var(--text-400);margin-top:2px;}
+.eksp-divider{width:1px;height:26px;background:#F1F5F9;}
+
+/* Baris tabel klikable di eksplorasi */
+.eksp-table tbody tr{cursor:pointer;}
+.row-active{background:var(--blue-50)!important;}
+
+/* Progress bar */
+.pct-bar-wrap{display:flex;align-items:center;gap:7px;}
+.pct-bar{flex:1;height:5px;background:var(--bg);border-radius:99px;overflow:hidden;min-width:44px;}
+.pct-bar-fill{height:100%;background:linear-gradient(90deg,var(--blue-600),var(--blue-400));border-radius:99px;transition:width .5s cubic-bezier(.4,0,.2,1);}
+.pct-text{font-size:11px;font-weight:700;color:var(--blue-700);white-space:nowrap;min-width:34px;}
+
+/* Status pakai di tabel sekolah */
+.s-pakai{color:var(--green);font-weight:700;}
+.s-belum{color:var(--red);}
+
+/* ===== MOBILE ===== */
+@media(max-width:900px){
+  .sidebar{transform:translateX(-100%);}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.18);}
+  .sidebar-overlay{display:block;}
+  .main{margin-left:0;}
+  .hamburger-btn{display:flex;}
+  .topbar{padding:10px 14px;}
+  .topbar-title{font-size:14px;}
+  .page{padding:12px;}
+  /* Cards: 3 kotak berdampingan */
+  .cards-grid{grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+  .sum-card{padding:11px 10px;gap:8px;flex-direction:column;align-items:flex-start;}
+  .sum-ring{width:44px;height:44px;}
+  .sum-ring svg{width:44px;height:44px;}
+  .sum-ring-lbl{font-size:9px;}
+  .sum-card-value{font-size:18px;letter-spacing:-.5px;}
+  .sum-card-label{font-size:8px;letter-spacing:.6px;}
+  .sum-card-sub{font-size:9px;}
+  /* Charts */
+  .charts-grid{grid-template-columns:1fr;gap:11px;}
+  .chart-card.c2,.chart-card.c3{grid-column:span 1;}
+  /* Filter */
+  .filter-bar{gap:6px;}
+  .fb-select{min-width:0;flex:1;font-size:11px;}
+  .t-filters{padding:9px 13px;}
+  .filter-input{min-width:100%;}
+  .filter-select{flex:1;}
+  .t-pagination{flex-direction:column;align-items:flex-start;gap:8px;}
+  /* Topbar */
+  .period-badge .period-label{display:none;}
+  .refresh-btn .refresh-label{display:none;}
+  .refresh-btn{padding:7px 9px;}
+  /* Chart */
+  .prov-chart-wrap{height:300px;}
+  /* Tabel scroll hint */
+  .table-wrap{-webkit-overflow-scrolling:touch;}
+  /* Eksplorasi stats wrap */
+  .eksp-stats{gap:8px;}
+  .eksp-stat-val{font-size:13px;}
+}
+@media(max-width:480px){
+  .topbar-sub{display:none;}
+  .cards-grid{gap:6px;}
+  .sum-card{padding:10px 8px;}
+  .sum-card-value{font-size:16px;}
+  .sum-card-label{font-size:7.5px;}
+  .sum-ring{width:38px;height:38px;}
+  .sum-ring svg{width:38px;height:38px;}
+  .sum-ring-lbl{font-size:8px;}
+  .page{padding:10px;}
+  /* Pada layar sangat kecil, sum-card total bisa lebih besar */
+  .sum-card.total .sum-card-value{font-size:18px;}
+  /* Filter bar: wrap rapi */
+  .filter-bar{flex-wrap:wrap;}
+  .fb-select{min-width:calc(50% - 6px);}
+  /* Tabel: font lebih kecil agar muat */
+  table{font-size:12px;}
+  tbody td{padding:8px 10px;}
+  thead th{padding:7px 10px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING SCREEN -->
+<div id="loading-screen">
+  <div class="ls-logo">
+    <img src="logo-erapor.png" alt="e-Rapor SMA" class="ls-logo-img">
+    <div style="text-align:center">
+      <div class="ls-logo-name">e-Rapor SMA</div>
+      <div class="ls-logo-sub">Dashboard Pengguna — Kemendikdasmen</div>
+    </div>
+  </div>
+  <div class="ls-bar-wrap">
+    <div class="ls-bar-track"><div class="ls-bar-fill" id="bar-fill"></div></div>
+    <div class="ls-bar-foot">
+      <span class="ls-status-txt" id="loading-status">Menghubungkan ke server…</span>
+      <span class="ls-pct" id="loading-pct">0%</span>
+    </div>
+  </div>
+</div>
+
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div class="layout">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">
+        <img src="logo-erapor.png" alt="" class="sidebar-brand-logo">
+        <div>
+          <div class="sidebar-brand-text">e-Rapor SMA</div>
+          <div class="sidebar-brand-sub">Kemendikdasmen</div>
+        </div>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">Menu</div>
+      <div class="nav-item active" data-page="ringkasan" onclick="showPage('ringkasan');closeSidebarMobile()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+        </svg>
+        Ringkasan
+      </div>
+      <div class="nav-item" data-page="eksplorasi" onclick="showPage('eksplorasi');closeSidebarMobile()">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+        </svg>
+        Rincian Data
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div>Terakhir diperbarui</div>
+      <div id="last-updated">–</div>
+    </div>
+  </aside>
+
+  <main class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="topbar-left">
+        <button class="hamburger-btn" onclick="toggleSidebar()">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+        <div>
+          <div class="topbar-title" id="page-title">Ringkasan</div>
+          <div class="topbar-sub">Dashboard Pengguna e-Rapor SMA</div>
+        </div>
+      </div>
+      <div class="topbar-right">
+        <div class="period-badge" id="period-badge">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <span class="period-label">Data per</span>
+          <span id="period-text">–</span>
+        </div>
+        <button class="refresh-btn" onclick="loadData(true)">
+          <svg class="spin-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+          <span class="refresh-label">Refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ===== PAGE: RINGKASAN ===== -->
+    <div class="page active" id="page-ringkasan">
+
+      <div class="filter-bar">
+        <span class="filter-bar-label">Filter:</span>
+        <select class="fb-select" id="fb-prov" onchange="onFbChange()"><option value="">Semua Provinsi</option></select>
+        <select class="fb-select" id="fb-kab"  onchange="onFbChange()"><option value="">Semua Kab/Kota</option></select>
+        <select class="fb-select" id="fb-status" onchange="onFbChange()">
+          <option value="">Negeri &amp; Swasta</option>
+          <option value="Negeri">Negeri</option>
+          <option value="Swasta">Swasta</option>
+        </select>
+        <button class="fb-reset" id="fb-reset" onclick="resetFb()">✕ Reset</button>
+        <span class="fb-info" id="fb-info"></span>
+      </div>
+
+      <!-- 1. 3 Kotak -->
+      <div class="cards-grid" id="cards-grid"></div>
+
+      <!-- 2. Tabel daftar sekolah pengguna -->
+      <div class="table-card" style="margin-bottom:18px">
+        <div class="t-head-row" style="padding:15px 16px 12px">
+          <div>
+            <div class="t-title">Daftar Sekolah Pengguna</div>
+            <div class="t-count" id="count-terbaru">–</div>
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <div style="position:relative">
+              <svg style="position:absolute;left:9px;top:50%;transform:translateY(-50%);opacity:.4" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input class="filter-input" id="search-terbaru" placeholder="Cari NPSN atau nama sekolah…"
+                oninput="onSearchTerbaru()" style="padding-left:28px;min-width:240px;background:var(--bg);border-radius:8px">
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Waktu Daftar</th><th>NPSN</th><th>Nama Sekolah</th><th>Provinsi</th><th>Kab/Kota</th><th>Versi</th><th>Sejak</th></tr>
+            </thead>
+            <tbody id="tbody-terbaru"></tbody>
+          </table>
+        </div>
+        <div class="t-pagination" id="pag-terbaru"></div>
+      </div>
+
+      <!-- 3. Chart provinsi memanjang -->
+      <div class="chart-card" style="margin-bottom:18px" id="chart-prov-wrap">
+        <div class="chart-title">Persentase Pengguna per Provinsi</div>
+        <div class="chart-sub" id="chart-prov-sub">38 Provinsi — diurutkan berdasarkan capaian tertinggi</div>
+        <div class="prov-chart-wrap"><canvas id="chart-provinsi"></canvas></div>
+      </div>
+
+      <!-- 4. 3 Chart kecil 33% masing2 -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="chart-title">Tren Penggunaan</div>
+          <div class="chart-sub">Tahun pertama sekolah mendaftar</div>
+          <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Status Sekolah</div>
+          <div class="chart-sub">Pengguna Negeri vs Swasta</div>
+          <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Distribusi Versi</div>
+          <div class="chart-sub">Versi e-Rapor yang digunakan</div>
+          <div class="chart-wrap"><canvas id="chart-versi"></canvas></div>
+        </div>
+      </div>
+
+    </div><!-- /page-ringkasan -->
+
+    <!-- ===== PAGE: EKSPLORASI ===== -->
+    <div class="page" id="page-eksplorasi">
+
+      <div class="eksp-search-wrap">
+        <input class="eksp-search" id="eksp-npsn" placeholder="Cari NPSN…" maxlength="20"
+          onkeydown="if(event.key==='Enter')cariNpsn()" oninput="if(!this.value.trim())clearNpsnInfo()">
+        <button class="eksp-search-btn" onclick="cariNpsn()">Cari</button>
+        <span class="eksp-search-info" id="eksp-info"></span>
+      </div>
+
+      <div class="breadcrumb" id="breadcrumb"></div>
+
+      <!-- Level 1: Provinsi -->
+      <div class="eksp-card" id="level-prov">
+        <div class="eksp-card-header">
+          <div>
+            <div class="eksp-card-title">Semua Provinsi</div>
+            <div class="eksp-card-sub">Klik baris untuk drill-down ke Kab/Kota</div>
+          </div>
+          <div class="eksp-stats" id="stats-nasional"></div>
+        </div>
+        <div class="table-wrap eksp-table">
+          <table>
+            <thead><tr><th>No</th><th>Provinsi</th><th>Total</th><th>Pengguna</th><th>Belum</th><th>Capaian</th></tr></thead>
+            <tbody id="tbody-prov"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Level 2: Kab/Kota -->
+      <div class="eksp-card" id="level-kab" style="display:none">
+        <div class="eksp-card-header">
+          <div>
+            <div class="eksp-card-title" id="kab-title">Kab/Kota</div>
+            <div class="eksp-card-sub">Klik baris untuk melihat daftar sekolah</div>
+          </div>
+          <div class="eksp-stats" id="stats-prov"></div>
+        </div>
+        <div class="table-wrap eksp-table">
+          <table>
+            <thead><tr><th>No</th><th>Kabupaten / Kota</th><th>Total</th><th>Pengguna</th><th>Belum</th><th>Capaian</th></tr></thead>
+            <tbody id="tbody-kab"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Level 3: Sekolah -->
+      <div class="eksp-card" id="level-sekolah" style="display:none">
+        <div class="eksp-card-header">
+          <div>
+            <div class="eksp-card-title" id="sekolah-title">Daftar Sekolah</div>
+            <div class="eksp-card-sub" id="sekolah-sub">–</div>
+          </div>
+          <div class="eksp-stats" id="stats-kab"></div>
+        </div>
+        <div class="t-filters" style="padding:10px 16px">
+          <input class="filter-input" id="search-sekolah" placeholder="Cari nama…" oninput="filterSekolah()" style="min-width:160px">
+          <select class="filter-select" id="filter-status-sekolah" onchange="filterSekolah()">
+            <option value="">Semua</option>
+            <option value="pakai">Sudah Pakai</option>
+            <option value="belum">Belum Pakai</option>
+          </select>
+        </div>
+        <div class="table-wrap eksp-table">
+          <table>
+            <thead><tr><th>No</th><th>NPSN</th><th>Nama Sekolah</th><th>Status</th><th>e-Rapor</th><th>Versi</th><th>Sejak</th></tr></thead>
+            <tbody id="tbody-sekolah"></tbody>
+          </table>
+        </div>
+        <div class="t-pagination" id="pag-sekolah"></div>
+      </div>
+
+    </div><!-- /page-eksplorasi -->
+
+  </main>
+</div>
+
+<script>
+// ============================================================ CONFIG
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxI1Zl-tb_mi7nF-AShP40a25x9_ms9rn7bcGuM4WXl1YVXvL8l9UQ7wT8Xj-GeaVwo/exec";
+const SECRET_TOKEN    = "cZbNonESkRBzp5RLYXlXCk03PQg2FRtj";
+const PER_PAGE        = 15;
+
+// ============================================================ STATE
+let allPengguna  = [];
+let allBelum     = [];
+let allDapodik   = [];   // { npsn, nama, status, provinsi, kabupaten, pakai, versi, sejak, timestamp }
+let pageTerbaru  = 1;
+let pageSekolah  = 1;
+let eksplProv    = null;
+let eksplKab     = null;
+let eksplSekolahList = [];
+let chartTrend, chartVersi, chartStatus, chartProv;
+
+// ============================================================ SIDEBAR
+function toggleSidebar(){ const sb=document.getElementById('sidebar'); sb.classList.contains('open')?closeSidebar():openSidebar(); }
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sidebar-overlay').classList.add('show'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sidebar-overlay').classList.remove('show'); }
+function closeSidebarMobile(){ if(window.innerWidth<=900) closeSidebar(); }
+
+// ============================================================ LOADING
+function setProgress(pct,msg){
+  document.getElementById('bar-fill').style.width=pct+'%';
+  document.getElementById('loading-pct').textContent=pct+'%';
+  if(msg) document.getElementById('loading-status').textContent=msg;
+}
+
+// ============================================================ LOAD DATA
+async function loadData(isRefresh=false){
+  if(isRefresh) document.getElementById('loading-screen').classList.remove('hide');
+  setProgress(5,'Menghubungkan ke server…');
+  await delay(150);
+  setProgress(22,'Mengambil data responses…');
+  let raw;
+  try{
+    const res=await fetch(`${APPS_SCRIPT_URL}?token=${SECRET_TOKEN}`);
+    setProgress(55,'Memproses data…');
+    raw=await res.json();
+  }catch(e){
+    setProgress(100,'Gagal mengambil data. Cek koneksi atau URL Apps Script.');
+    console.error(e); return;
+  }
+  if(raw.error){setProgress(100,raw.error);return;}
+  setProgress(72,'Mencocokkan data Dapodik…');
+  await delay(80);
+  processData(raw);
+  setProgress(88,'Membangun visualisasi…');
+  await delay(80);
+  buildCards();
+  buildCharts();   // buildProvChart + buildSmallCharts
+  renderTerbaru();
+  renderEksplorasiProv();
+  setProgress(100,'Dashboard siap!');
+  await delay(350);
+  const updStr=new Date(raw.updated).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  document.getElementById('last-updated').textContent=updStr;
+  document.getElementById('period-text').textContent=updStr;
+  document.getElementById('period-badge').style.display='flex';
+  document.getElementById('loading-screen').classList.add('hide');
+}
+
+// ============================================================ PROSES DATA
+function processData(raw){
+  const responses=raw.responses||[];
+  const dapodik=raw.dapodik||[];
+
+  // Normalisasi key Dapodik agar case-insensitive (misal kolom STATUS → d.STATUS atau d.status)
+  const normDapodik=dapodik.map(raw=>{
+    const d={};
+    Object.keys(raw).forEach(k=>{ d[k.toLowerCase().trim()]=raw[k]; });
+    return d;
+  });
+
+  const dapodikMap=new Map();
+  normDapodik.forEach(d=>dapodikMap.set(String(d.npsn).trim(),d));
+
+  const responseMap=new Map();
+  responses.forEach(r=>{
+    const npsn=String(r.npsn).trim();
+    const ex=responseMap.get(npsn);
+    if(!ex||new Date(r.timestamp)>new Date(ex.timestamp)) responseMap.set(npsn,r);
+  });
+
+  allPengguna=[];
+  responseMap.forEach((r,npsn)=>{
+    if(!dapodikMap.has(npsn)) return;
+    const d=dapodikMap.get(npsn);
+    allPengguna.push({
+      npsn, timestamp:r.timestamp,
+      nama:d.nama||d['nama sekolah']||'', status:normStatus(d.status||''),
+      provinsi:normProv(d.provinsi||''), kabupaten:normKab(d.kabupaten||d['kab/kota']||d['kabupaten/kota']||''),
+      versi:r.versi||'', sejak:r.sejak||'',
+      pakai:true
+    });
+  });
+  allPengguna.sort((a,b)=>new Date(b.timestamp)-new Date(a.timestamp));
+
+  allBelum=[];
+  dapodikMap.forEach((d,npsn)=>{
+    if(responseMap.has(npsn)) return;
+    allBelum.push({
+      npsn, timestamp:'',
+      nama:d.nama||d['nama sekolah']||'', status:normStatus(d.status||''),
+      provinsi:normProv(d.provinsi||''), kabupaten:normKab(d.kabupaten||d['kab/kota']||d['kabupaten/kota']||''),
+      versi:'', sejak:'', pakai:false
+    });
+  });
+
+  allDapodik=[...allPengguna,...allBelum];
+
+  // Provinsi dropdown dari Dapodik
+  const provList=[...new Set(allDapodik.map(d=>d.provinsi).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'));
+  fillSelectEl(document.getElementById('fb-prov'),provList);
+}
+
+function normProv(p){return(p||'').replace(/^Prov\.\s*/i,'').trim();}
+function normKab(k){return(k||'').trim();}
+// Normalisasi status: "N"/"Negeri"/"NEGERI" → "Negeri", "S"/"Swasta"/"SWASTA" → "Swasta"
+function normStatus(s){
+  const v=(s||'').trim().toUpperCase();
+  if(v==='N'||v==='NEGERI') return 'Negeri';
+  if(v==='S'||v==='SWASTA') return 'Swasta';
+  return s||'';
+}
+function fillSelectEl(el,opts){
+  const cur=el.value;
+  while(el.options.length>1) el.remove(1);
+  opts.forEach(o=>{const op=document.createElement('option');op.value=op.textContent=o;el.appendChild(op);});
+  if(cur) el.value=cur;
+}
+
+// ============================================================ FILTER BAR
+function onFbChange(){
+  const prov=document.getElementById('fb-prov').value;
+  const kabEl=document.getElementById('fb-kab');
+  const prevKab=kabEl.value;
+  while(kabEl.options.length>1) kabEl.remove(1);
+  if(prov){
+    const kabs=[...new Set(allDapodik.filter(d=>d.provinsi===prov).map(d=>d.kabupaten).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'id'));
+    kabs.forEach(k=>{const op=document.createElement('option');op.value=op.textContent=k;kabEl.appendChild(op);});
+    if(kabs.includes(prevKab)) kabEl.value=prevKab;
+  }
+  const kab=kabEl.value;
+  const stat=document.getElementById('fb-status').value;
+  const any=!!(prov||kab||stat);
+  document.getElementById('fb-reset').classList.toggle('visible',any);
+  const infoEl=document.getElementById('fb-info');
+  if(any){ infoEl.textContent=[prov,kab,stat].filter(Boolean).join(' · '); infoEl.classList.add('visible'); }
+  else infoEl.classList.remove('visible');
+
+  buildCards();
+  buildProvChart();   // chart provinsi selalu rebuild ikut filter
+  buildSmallCharts(); // 3 chart kecil ikut filter
+  renderTerbaru();
+}
+
+function resetFb(){
+  document.getElementById('fb-prov').value='';
+  document.getElementById('fb-status').value='';
+  const kabEl=document.getElementById('fb-kab');
+  while(kabEl.options.length>1) kabEl.remove(1);
+  kabEl.value='';
+  document.getElementById('fb-reset').classList.remove('visible');
+  document.getElementById('fb-info').classList.remove('visible');
+  buildCards();
+  buildProvChart();
+  buildSmallCharts();
+  renderTerbaru();
+}
+
+function getFbFiltered(){
+  const prov=document.getElementById('fb-prov').value;
+  const kab=document.getElementById('fb-kab').value;
+  const stat=document.getElementById('fb-status').value;
+  const fn=d=>{
+    if(prov&&d.provinsi!==prov) return false;
+    if(kab&&d.kabupaten!==kab) return false;
+    if(stat&&d.status!==stat) return false;
+    return true;
+  };
+  return{pengguna:allPengguna.filter(fn),belum:allBelum.filter(fn)};
+}
+
+// ============================================================ SUMMARY CARDS
+function buildCards(){
+  const{pengguna,belum}=getFbFiltered();
+  const used=pengguna.length,notUsed=belum.length,total=used+notUsed;
+  const pU=total?+((used/total)*100).toFixed(1):0;
+  const pN=total?+((notUsed/total)*100).toFixed(1):0;
+  const prov=document.getElementById('fb-prov').value;
+  const kab=document.getElementById('fb-kab').value;
+  const sub=kab?kab:prov?prov:'SMA se-Indonesia';
+  const r=24, cx=30, cy=30, circ=2*Math.PI*r;
+  // stroke-dashoffset negatif = geser start point ke atas (jam 12), searah jarum jam
+  function ring(pct){
+    const dash=(pct/100)*circ;
+    return`<svg width="60" height="60" viewBox="0 0 60 60">
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.18)" stroke-width="6"/>
+      <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.95)" stroke-width="6"
+        stroke-dasharray="${dash} ${circ-dash}" stroke-dashoffset="${circ/4}" stroke-linecap="round"
+        transform="rotate(-90 ${cx} ${cy})"/>
+    </svg>`;
+  }
+  document.getElementById('cards-grid').innerHTML=`
+    <div class="sum-card total">
+      <div style="width:48px;height:48px;background:rgba(255,255,255,.15);border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>
+        </svg>
+      </div>
+      <div class="sum-card-data">
+        <div class="sum-card-label">Total Satuan Pendidikan</div>
+        <div class="sum-card-value">${fmtNum(total)}</div>
+        <div class="sum-card-sub">${sub}</div>
+      </div>
+    </div>
+    <div class="sum-card used">
+      <div class="sum-ring">${ring(pU)}<div class="sum-ring-lbl">${pU}%</div></div>
+      <div class="sum-card-data">
+        <div class="sum-card-label">Pengguna e-Rapor</div>
+        <div class="sum-card-value">${fmtNum(used)}</div>
+        <div class="sum-card-sub">${pU}% dari total sekolah</div>
+      </div>
+    </div>
+    <div class="sum-card notyet">
+      <div class="sum-ring">${ring(pN)}<div class="sum-ring-lbl">${pN}%</div></div>
+      <div class="sum-card-data">
+        <div class="sum-card-label">Belum Menggunakan</div>
+        <div class="sum-card-value">${fmtNum(notUsed)}</div>
+        <div class="sum-card-sub">${pN}% dari total sekolah</div>
+      </div>
+    </div>`;
+}
+
+// ============================================================ CHARTS
+function buildCharts(){ buildProvChart(); buildSmallCharts(); }
+
+// Ambil data yang sudah difilter untuk chart kecil
+function getFilteredDapodik(){
+  const prov=document.getElementById('fb-prov').value;
+  const kab=document.getElementById('fb-kab').value;
+  const stat=document.getElementById('fb-status').value;
+  return allDapodik.filter(d=>{
+    if(prov&&d.provinsi!==prov) return false;
+    if(kab&&d.kabupaten!==kab)  return false;
+    if(stat&&d.status!==stat)   return false;
+    return true;
+  });
+}
+
+function buildSmallCharts(){
+  const data=getFilteredDapodik();
+  const pengguna=data.filter(d=>d.pakai);
+  buildTrendChart(pengguna);
+  buildVersiChart(pengguna);
+  buildStatusChart(pengguna);
+}
+
+function buildTrendChart(pengguna){
+  // Isi semua tahun dari min ke max, kosong jadi 0
+  const counts={};
+  pengguna.forEach(d=>{const y=parseInt(d.sejak);if(y>=2016&&y<=2030)counts[y]=(counts[y]||0)+1;});
+  const minY=2016, maxY=new Date().getFullYear();
+  const years=[];
+  for(let y=minY;y<=maxY;y++) years.push(y);
+  const vals=years.map(y=>counts[y]||0);
+
+  if(chartTrend) chartTrend.destroy();
+  const canvas=document.getElementById('chart-trend');
+  const ctx2=canvas.getContext('2d');
+  const grad=ctx2.createLinearGradient(0,0,0,200);
+  grad.addColorStop(0,'rgba(33,150,243,.35)');
+  grad.addColorStop(1,'rgba(33,150,243,.02)');
+
+  chartTrend=new Chart(canvas,{
+    type:'line',
+    data:{
+      labels:years,
+      datasets:[{
+        label:'Sekolah',data:vals,
+        borderColor:'#1976D2',borderWidth:2.5,
+        backgroundColor:grad,
+        fill:true,
+        tension:.4,
+        pointBackgroundColor:'#1976D2',
+        pointBorderColor:'white',
+        pointBorderWidth:2,
+        pointRadius:4,
+        pointHoverRadius:6,
+        pointHoverBackgroundColor:'#1338A8',
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx3=>`${ctx3.parsed.y} sekolah`}}},
+      scales:{
+        y:{beginAtZero:true,grid:{color:'#F1F5F9'},ticks:{font:{size:11},stepSize:1}},
+        x:{grid:{display:false},ticks:{font:{size:11}}}
+      }
+    }
+  });
+}
+
+function buildVersiChart(pengguna){
+  const v2025=pengguna.filter(d=>d.versi&&d.versi.includes('2025')).length;
+  const v232=pengguna.filter(d=>d.versi&&d.versi.includes('23')).length;
+  const other=pengguna.length-v2025-v232;
+  if(chartVersi) chartVersi.destroy();
+  chartVersi=new Chart(document.getElementById('chart-versi'),{
+    type:'doughnut',
+    data:{labels:['Versi 2025','Versi 23.2','Lainnya'],datasets:[{data:[v2025,v232,other],backgroundColor:['#2E7D32','#6A1B9A','#9CA3AF'],borderWidth:0,hoverOffset:5}]},
+    options:{responsive:true,maintainAspectRatio:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}
+  });
+}
+
+function buildStatusChart(pengguna){
+  // Status dari Dapodik — sudah ada di field d.status yang diset dari processData
+  const negeri=pengguna.filter(d=>d.status==='Negeri').length;
+  const swasta=pengguna.filter(d=>d.status==='Swasta').length;
+  if(chartStatus) chartStatus.destroy();
+  chartStatus=new Chart(document.getElementById('chart-status'),{
+    type:'doughnut',
+    data:{
+      labels:['Negeri','Swasta'],
+      datasets:[{
+        data:[negeri,swasta],
+        backgroundColor:['#1565C0','#F57C00'],
+        borderWidth:0,hoverOffset:5
+      }]
+    },
+    options:{
+      responsive:true,maintainAspectRatio:true,cutout:'65%',
+      plugins:{
+        legend:{position:'bottom',labels:{font:{size:11},padding:10}},
+        tooltip:{callbacks:{label:ctx3=>{
+          const tot=negeri+swasta;
+          const pct=tot?((ctx3.parsed/tot)*100).toFixed(1):0;
+          return` ${fmtNum(ctx3.parsed)} sekolah (${pct}%)`;
+        }}}
+      }
+    }
+  });
+}
+
+function buildProvChart(){
+  const prov=document.getElementById('fb-prov').value;
+  const kab=document.getElementById('fb-kab').value;
+  const stat=document.getElementById('fb-status').value;
+
+  // Update subtitle
+  const sub=prov?(kab?`${prov} — ${kab}`:`Provinsi ${prov}`):'38 Provinsi — diurutkan berdasarkan capaian tertinggi';
+  document.getElementById('chart-prov-sub').textContent=sub;
+
+  // Hitung per provinsi dari data terfilter (status saja, bukan wilayah — karena kita tetap tampilkan semua prov)
+  // Kalau filter provinsi aktif, fokus ke satu provinsi saja tapi tetap tampil
+  let sourceData=allDapodik;
+  if(stat) sourceData=allDapodik.filter(d=>d.status===stat);
+
+  const map={};
+  sourceData.forEach(d=>{
+    if(!d.provinsi) return;
+    if(!map[d.provinsi]) map[d.provinsi]={used:0,total:0};
+    map[d.provinsi].total++;
+    if(d.pakai) map[d.provinsi].used++;
+  });
+
+  let sorted=Object.entries(map)
+    .map(([p,v])=>({p,pct:v.total?+((v.used/v.total)*100).toFixed(1):0,used:v.used,total:v.total}))
+    .sort((a,b)=>b.pct-a.pct);
+
+  // Kalau filter provinsi aktif, highlight provinsi itu saja
+  const activeProv=prov||null;
+
+  // Warna: bar gradien canvas via createLinearGradient — pakai plugin
+  if(chartProv) chartProv.destroy();
+
+  const canvas=document.getElementById('chart-provinsi');
+  const ctx=canvas.getContext('2d');
+
+  // Buat array warna: aktif=gradien biru, tidak aktif kalau ada filter=abu muda, kalau tidak ada filter semua biru gradien
+  const bgColors=sorted.map(e=>{
+    if(activeProv && e.p!==activeProv) return 'rgba(200,210,220,.35)';
+    return 'bar-gradient'; // placeholder, diganti pakai plugin
+  });
+
+  chartProv=new Chart(canvas,{
+    type:'bar',
+    data:{
+      labels:sorted.map(e=>e.p),
+      datasets:[{
+        label:'% Pengguna',
+        data:sorted.map(e=>e.pct),
+        backgroundColor:sorted.map(e=>{
+          if(activeProv && e.p!==activeProv) return 'rgba(200,215,228,.4)';
+          return '#1976D2';
+        }),
+        hoverBackgroundColor:sorted.map(e=>{
+          if(activeProv && e.p!==activeProv) return 'rgba(200,215,228,.55)';
+          return '#1338A8'; // sedikit lebih gelap saat hover tapi kembali ke normal
+        }),
+        borderRadius:3,
+        borderSkipped:false,
+      }]
+    },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      onHover(evt,elements){
+        evt.native.target.style.cursor=elements.length?'pointer':'default';
+      },
+      onClick(evt,elements){
+        if(!elements.length) return;
+        const idx=elements[0].index;
+        const clickedProv=sorted[idx].p;
+        // Aktifkan filter provinsi
+        const provEl=document.getElementById('fb-prov');
+        if(provEl.value===clickedProv){
+          // Klik provinsi yang sama → reset
+          resetFb();
+        } else {
+          provEl.value=clickedProv;
+          onFbChange();
+          // Scroll ke atas supaya filter bar & tabel terlihat
+          window.scrollTo({top:0,behavior:'smooth'});
+        }
+      },
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            title:ctx2=>ctx2[0].label,
+            label:ctx2=>{
+              const d=sorted[ctx2.dataIndex];
+              return[` ${d.pct}%`,` ${fmtNum(d.used)} pengguna dari ${fmtNum(d.total)} sekolah`];
+            },
+            footer:()=>'  Klik untuk filter provinsi ini'
+          }
+        }
+      },
+      scales:{
+        x:{
+          grid:{color:'rgba(241,245,249,.8)'},
+          ticks:{font:{size:10},maxRotation:45,minRotation:35,color:'#6B7280'}
+        },
+        y:{
+          beginAtZero:true,max:100,
+          grid:{color:'rgba(241,245,249,.8)'},
+          ticks:{font:{size:10},callback:v=>v+'%',color:'#6B7280'}
+        }
+      }
+    },
+    plugins:[{
+      id:'gradientBars',
+      afterLayout(chart){
+        const{ctx:c,chartArea,scales}=chart;
+        if(!chartArea) return;
+        const ds=chart.data.datasets[0];
+        const meta=chart.getDatasetMeta(0);
+        const newBg=[], newHover=[];
+        meta.data.forEach((bar,i)=>{
+          const orig=sorted[i];
+          if(activeProv && orig.p!==activeProv){
+            newBg.push('rgba(200,215,228,.4)');
+            newHover.push('rgba(180,200,215,.6)');
+            return;
+          }
+          const y0=bar.y, y1=scales.y.getPixelForValue(0);
+          if(!isFinite(y0)||!isFinite(y1)){
+            newBg.push('#1976D2');
+            newHover.push('#1338A8');
+            return;
+          }
+          const grad=c.createLinearGradient(0,y0,0,y1);
+          grad.addColorStop(0,'#42A5F5');
+          grad.addColorStop(1,'#0D2B6E');
+          newBg.push(grad);
+          // Hover sedikit lebih terang
+          const gradH=c.createLinearGradient(0,y0,0,y1);
+          gradH.addColorStop(0,'#64B5F6');
+          gradH.addColorStop(1,'#1338A8');
+          newHover.push(gradH);
+        });
+        ds.backgroundColor=newBg;
+        ds.hoverBackgroundColor=newHover;
+      }
+    }]
+  });
+}
+
+// ============================================================ TABEL TERBARU
+const PER_PAGE_TERBARU = 10;
+let searchTerbaruQ = '';
+
+function onSearchTerbaru(){
+  searchTerbaruQ=(document.getElementById('search-terbaru').value||'').toLowerCase();
+  pageTerbaru=1;
+  drawTerbaru();
+}
+
+function renderTerbaru(){ pageTerbaru=1; drawTerbaru(); }
+function drawTerbaru(){
+  const{pengguna}=getFbFiltered();
+  // Filter by search
+  const q=searchTerbaruQ;
+  const filtered=q
+    ? pengguna.filter(d=>d.npsn.includes(q)||d.nama.toLowerCase().includes(q))
+    : pengguna;
+
+  const total=filtered.length;
+  document.getElementById('count-terbaru').textContent=
+    q ? `${fmtNum(total)} sekolah ditemukan` : `${fmtNum(total)} sekolah pengguna`;
+
+  const start=(pageTerbaru-1)*PER_PAGE_TERBARU;
+  const rows=filtered.slice(start,start+PER_PAGE_TERBARU);
+  const tbody=document.getElementById('tbody-terbaru');
+  if(!rows.length){tbody.innerHTML=emptyRow(7);return;}
+
+  tbody.innerHTML=rows.map((d)=>{
+    const isMatch=q&&(d.npsn.includes(q)||d.nama.toLowerCase().includes(q));
+    return`<tr class="${isMatch?'row-highlight':''}">
+      <td><span class="ts-badge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+        </svg>
+        ${fmtTs(d.timestamp)}
+      </span></td>
+      <td class="npsn">${d.npsn}</td>
+      <td class="nama">${d.nama}</td>
+      <td>${d.provinsi||'–'}</td>
+      <td>${d.kabupaten||'–'}</td>
+      <td><span class="badge ${versiClass(d.versi)}">${d.versi||'–'}</span></td>
+      <td>${d.sejak||'–'}</td>
+    </tr>`;
+  }).join('');
+  renderPag('pag-terbaru',total,pageTerbaru,p=>{pageTerbaru=p;drawTerbaru();},PER_PAGE_TERBARU);
+}
+
+// ============================================================ EKSPLORASI — PROV
+function renderEksplorasiProv(){
+  eksplProv=null; eksplKab=null;
+  document.getElementById('level-kab').style.display='none';
+  document.getElementById('level-sekolah').style.display='none';
+  updateBc();
+
+  const map=buildProvMap();
+  const sorted=Object.entries(map).sort((a,b)=>b[1].pct-a[1].pct);
+  const totN=allDapodik.length, usedN=allPengguna.length;
+  document.getElementById('stats-nasional').innerHTML=statsHtml(usedN,totN-usedN,totN);
+
+  document.getElementById('tbody-prov').innerHTML=sorted.map(([prov,info],i)=>`
+    <tr onclick="drillProv('${esc(prov)}')" data-prov="${esc(prov)}">
+      <td>${i+1}</td>
+      <td class="nama">${prov}</td>
+      <td>${fmtNum(info.total)}</td>
+      <td style="color:var(--green);font-weight:700">${fmtNum(info.used)}</td>
+      <td style="color:var(--red)">${fmtNum(info.total-info.used)}</td>
+      <td><div class="pct-bar-wrap"><div class="pct-bar"><div class="pct-bar-fill" style="width:${info.pct}%"></div></div><span class="pct-text">${info.pct}%</span></div></td>
+    </tr>`).join('');
+}
+
+function drillProv(prov){
+  eksplProv=prov; eksplKab=null;
+  document.getElementById('level-sekolah').style.display='none';
+
+  // Hide baris provinsi lain, tampilkan hanya yang diklik
+  document.querySelectorAll('#tbody-prov tr').forEach(r=>{
+    if(r.dataset.prov===prov){
+      r.classList.add('row-active');
+      r.style.display='';
+    } else {
+      r.style.display='none';
+    }
+  });
+  updateBc();
+
+  // Render kab
+  const data=allDapodik.filter(d=>d.provinsi===prov);
+  const kabMap={};
+  data.forEach(d=>{
+    const k=d.kabupaten||'Tidak Diketahui';
+    if(!kabMap[k]) kabMap[k]={used:0,total:0};
+    kabMap[k].total++;
+    if(d.pakai) kabMap[k].used++;
+  });
+  const sorted=Object.entries(kabMap).map(([k,v])=>([k,{...v,pct:v.total?+((v.used/v.total)*100).toFixed(1):0}])).sort((a,b)=>b[1].pct-a[1].pct);
+
+  document.getElementById('kab-title').textContent=`Kab/Kota — ${prov}`;
+  const totP=data.length,usedP=data.filter(d=>d.pakai).length;
+  document.getElementById('stats-prov').innerHTML=statsHtml(usedP,totP-usedP,totP);
+
+  document.getElementById('tbody-kab').innerHTML=sorted.map(([kab,info],i)=>`
+    <tr onclick="drillKab('${esc(kab)}')" data-kab="${esc(kab)}">
+      <td>${i+1}</td>
+      <td class="nama">${kab}</td>
+      <td>${fmtNum(info.total)}</td>
+      <td style="color:var(--green);font-weight:700">${fmtNum(info.used)}</td>
+      <td style="color:var(--red)">${fmtNum(info.total-info.used)}</td>
+      <td><div class="pct-bar-wrap"><div class="pct-bar"><div class="pct-bar-fill" style="width:${info.pct}%"></div></div><span class="pct-text">${info.pct}%</span></div></td>
+    </tr>`).join('');
+
+  document.getElementById('level-kab').style.display='';
+  setTimeout(()=>document.getElementById('level-kab').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+// ============================================================ EKSPLORASI — KAB
+function drillKab(kab){
+  eksplKab=kab;
+  // Hide baris kab lain
+  document.querySelectorAll('#tbody-kab tr').forEach(r=>{
+    if(r.dataset.kab===kab){
+      r.classList.add('row-active');
+      r.style.display='';
+    } else {
+      r.style.display='none';
+    }
+  });
+  updateBc();
+
+  eksplSekolahList=allDapodik.filter(d=>d.provinsi===eksplProv&&d.kabupaten===kab);
+  document.getElementById('sekolah-title').textContent=kab;
+  const tot=eksplSekolahList.length,used=eksplSekolahList.filter(d=>d.pakai).length;
+  document.getElementById('sekolah-sub').textContent=`${fmtNum(used)} pengguna dari ${fmtNum(tot)} sekolah (${tot?((used/tot)*100).toFixed(1):0}%)`;
+  document.getElementById('stats-kab').innerHTML=statsHtml(used,tot-used,tot);
+  document.getElementById('search-sekolah').value='';
+  document.getElementById('filter-status-sekolah').value='';
+  pageSekolah=1;
+  drawSekolah();
+  document.getElementById('level-sekolah').style.display='';
+  setTimeout(()=>document.getElementById('level-sekolah').scrollIntoView({behavior:'smooth',block:'nearest'}),50);
+}
+
+// ============================================================ EKSPLORASI — SEKOLAH
+function filterSekolah(){ pageSekolah=1; drawSekolah(); }
+function drawSekolah(){
+  const q=(document.getElementById('search-sekolah').value||'').toLowerCase();
+  const stat=document.getElementById('filter-status-sekolah').value;
+  const filtered=eksplSekolahList.filter(d=>{
+    if(stat==='pakai'&&!d.pakai) return false;
+    if(stat==='belum'&&d.pakai)  return false;
+    if(q&&!d.npsn.includes(q)&&!d.nama.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const start=(pageSekolah-1)*PER_PAGE;
+  const rows=filtered.slice(start,start+PER_PAGE);
+  const tbody=document.getElementById('tbody-sekolah');
+  if(!rows.length){tbody.innerHTML=emptyRow(7);return;}
+  tbody.innerHTML=rows.map((d,i)=>`
+    <tr id="row-${d.npsn}">
+      <td>${start+i+1}</td>
+      <td class="npsn">${d.npsn}</td>
+      <td class="nama">${d.nama}</td>
+      <td><span class="badge ${d.status==='Negeri'?'negeri':'swasta'}">${d.status||'–'}</span></td>
+      <td class="${d.pakai?'s-pakai':'s-belum'}">${d.pakai?'✓ Sudah Pakai':'✗ Belum'}</td>
+      <td>${d.pakai?`<span class="badge ${versiClass(d.versi)}">${d.versi||'–'}</span>`:'–'}</td>
+      <td>${d.pakai?(d.sejak||'–'):'–'}</td>
+    </tr>`).join('');
+  renderPag('pag-sekolah',filtered.length,pageSekolah,p=>{pageSekolah=p;drawSekolah();});
+}
+
+// ============================================================ BREADCRUMB
+function updateBc(){
+  const bc=document.getElementById('breadcrumb');
+  let h=`<button class="bc-btn ${!eksplProv?'':''}" onclick="goNasional()">Indonesia</button>`;
+  if(eksplProv){
+    h+=`<span class="bc-sep">›</span>`;
+    if(!eksplKab) h+=`<span class="bc-cur">${eksplProv}</span>`;
+    else h+=`<button class="bc-btn" onclick="drillProv('${esc(eksplProv)}')">${eksplProv}</button>`;
+  }
+  if(eksplKab){
+    h+=`<span class="bc-sep">›</span>`;
+    h+=`<span class="bc-cur">${eksplKab}</span>`;
+  }
+  bc.innerHTML=h;
+}
+
+function goNasional(){
+  eksplProv=null; eksplKab=null;
+  document.getElementById('level-kab').style.display='none';
+  document.getElementById('level-sekolah').style.display='none';
+  // Tampilkan kembali semua baris provinsi
+  document.querySelectorAll('#tbody-prov tr').forEach(r=>{
+    r.style.display='';
+    r.classList.remove('row-active');
+  });
+  updateBc();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ============================================================ SEARCH NPSN
+function clearNpsnInfo(){ document.getElementById('eksp-info').textContent=''; document.getElementById('eksp-info').className='eksp-search-info'; }
+
+function cariNpsn(){
+  const q=document.getElementById('eksp-npsn').value.trim();
+  const info=document.getElementById('eksp-info');
+  if(!q){ clearNpsnInfo(); return; }
+  const found=allDapodik.find(d=>d.npsn===q);
+  if(!found){
+    info.textContent=`NPSN "${q}" tidak ditemukan di Dapodik.`;
+    info.className='eksp-search-info notfound';
+    return;
+  }
+  clearNpsnInfo();
+  // Drill-down ke lokasi sekolah
+  goNasional();
+  renderEksplorasiProv();
+  setTimeout(()=>{
+    drillProv(found.provinsi);
+    setTimeout(()=>{
+      drillKab(found.kabupaten);
+      setTimeout(()=>{
+        // Scroll & highlight baris
+        const row=document.getElementById('row-'+found.npsn);
+        if(row){
+          row.style.background='#FFF9C4';
+          row.scrollIntoView({behavior:'smooth',block:'center'});
+        }
+        info.textContent=`Ditemukan: ${found.nama} (${found.pakai?'Sudah Pakai':'Belum Pakai'})`;
+        info.className='eksp-search-info found';
+      },120);
+    },120);
+  },80);
+}
+
+// ============================================================ HELPERS
+function buildProvMap(){
+  const map={};
+  allDapodik.forEach(d=>{
+    if(!d.provinsi) return;
+    if(!map[d.provinsi]) map[d.provinsi]={used:0,total:0};
+    map[d.provinsi].total++;
+    if(d.pakai) map[d.provinsi].used++;
+  });
+  Object.values(map).forEach(v=>v.pct=v.total?+((v.used/v.total)*100).toFixed(1):0);
+  return map;
+}
+
+function statsHtml(used,notUsed,total){
+  return`<div class="eksp-stat"><div class="eksp-stat-val b">${fmtNum(total)}</div><div class="eksp-stat-label">Total</div></div>
+    <div class="eksp-divider"></div>
+    <div class="eksp-stat"><div class="eksp-stat-val g">${fmtNum(used)}</div><div class="eksp-stat-label">Pengguna</div></div>
+    <div class="eksp-divider"></div>
+    <div class="eksp-stat"><div class="eksp-stat-val r">${fmtNum(notUsed)}</div><div class="eksp-stat-label">Belum</div></div>`;
+}
+
+function fmtNum(n){ return Number(n).toLocaleString('id-ID'); }
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+function esc(s){ return(s||'').replace(/'/g,"\\'").replace(/"/g,'&quot;'); }
+function versiClass(v){ if(!v) return 'other'; if(v.includes('2025')) return 'v2025'; if(v.includes('23')) return 'v232'; return 'other'; }
+function fmtTs(ts){ if(!ts) return '–'; return new Date(ts).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function emptyRow(cols){ return`<tr><td colspan="${cols}"><div class="empty"><div class="empty-icon"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></div>Tidak ada data</div></td></tr>`; }
+
+function renderPag(id,total,current,onPage,perPage){
+  const pp=perPage||PER_PAGE;
+  const pages=Math.ceil(total/pp);
+  const el=document.getElementById(id);
+  if(pages<=1){el.innerHTML='';return;}
+  const s=(current-1)*pp+1,e=Math.min(current*pp,total);
+  let h=`<div class="page-info">Menampilkan ${fmtNum(s)}–${fmtNum(e)} dari ${fmtNum(total)}</div><div class="page-btns">`;
+  h+=`<button class="page-btn" ${current===1?'disabled':''} onclick="(${onPage.toString()})(${current-1})">‹</button>`;
+  let ps=Math.max(1,current-2),pe=Math.min(pages,current+2);
+  if(ps>1) h+=`<button class="page-btn" onclick="(${onPage.toString()})(1)">1</button>`;
+  if(ps>2) h+=`<span style="padding:0 4px;color:var(--text-300)">…</span>`;
+  for(let p=ps;p<=pe;p++) h+=`<button class="page-btn ${p===current?'active':''}" onclick="(${onPage.toString()})(${p})">${p}</button>`;
+  if(pe<pages-1) h+=`<span style="padding:0 4px;color:var(--text-300)">…</span>`;
+  if(pe<pages) h+=`<button class="page-btn" onclick="(${onPage.toString()})(${pages})">${pages}</button>`;
+  h+=`<button class="page-btn" ${current===pages?'disabled':''} onclick="(${onPage.toString()})(${current+1})">›</button></div>`;
+  el.innerHTML=h;
+}
+
+// ============================================================ NAVIGATION
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  document.querySelector(`[data-page="${name}"]`).classList.add('active');
+  document.getElementById('page-title').textContent=name==='ringkasan'?'Ringkasan':'Rincian Data';
+}
+
+// ============================================================ INIT
+loadData();
+</script>
+</body>
+</html>
