@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
 /* ============================================================ RESET & VARS */
 :root {
@@ -242,6 +244,52 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
 .s-pakai{color:var(--green);font-weight:700;}
 .s-belum{color:var(--red);}
 
+/* ===== PETA + LAYOUT BARU ===== */
+.map-side-grid{display:grid;grid-template-columns:2fr 1fr;gap:13px;margin-bottom:18px;align-items:start;}
+.map-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;position:relative;}
+.map-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap;}
+.map-avg-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;background:var(--blue-50);border:1px solid var(--blue-100);font-size:12px;font-weight:700;color:var(--blue-700);white-space:nowrap;flex-shrink:0;}
+.map-wrap{width:100%;height:320px;position:relative;border-radius:10px;overflow:hidden;background:#EDF2F7;}
+.leaflet-container{background:#c8d6e0!important;}
+.leaflet-control-zoom{border:none!important;box-shadow:0 1px 6px rgba(0,0,0,.12)!important;}
+.leaflet-control-zoom a{background:white!important;color:var(--text-600)!important;border:none!important;font-size:14px!important;}
+.leaflet-control-attribution{font-size:9px!important;background:rgba(255,255,255,.7)!important;}
+.map-tooltip{
+  position:fixed;pointer-events:none;z-index:9999;
+  background:var(--text-900);color:white;
+  padding:8px 12px;border-radius:9px;
+  font-size:12px;line-height:1.5;
+  box-shadow:0 4px 16px rgba(0,0,0,.22);
+  display:none;min-width:160px;
+}
+.map-tooltip-name{font-weight:700;font-size:13px;margin-bottom:3px;}
+.map-tooltip-row{display:flex;justify-content:space-between;gap:16px;opacity:.85;}
+.map-legend{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.map-legend-bar{flex:1;min-width:120px;height:10px;border-radius:99px;background:linear-gradient(90deg,#E3F2FD,#0D2B6E);}
+.map-legend-labels{display:flex;justify-content:space-between;font-size:10px;color:var(--text-400);margin-top:3px;}
+.map-legend-nodata{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--text-400);}
+.map-legend-nodata-box{width:14px;height:10px;border-radius:3px;background:#E5E7EB;border:1px solid #D1D5DB;flex-shrink:0;}
+
+/* Kolom kanan peta */
+.map-side-col{display:flex;flex-direction:column;gap:13px;}
+
+/* Status card baru */
+.status-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;}
+.status-title{font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:2px;}
+.status-sub{font-size:11px;color:var(--text-400);margin-bottom:14px;}
+.status-rows{display:flex;flex-direction:column;gap:10px;}
+.status-row{display:flex;flex-direction:column;gap:4px;}
+.status-row-top{display:flex;align-items:center;justify-content:space-between;}
+.status-row-label{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--text-600);}
+.status-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.status-row-nums{text-align:right;}
+.status-row-pct{font-size:15px;font-weight:800;line-height:1;}
+.status-row-count{font-size:10px;color:var(--text-400);margin-top:1px;}
+.status-strip-wrap{height:8px;border-radius:99px;overflow:hidden;background:#F1F5F9;margin-top:2px;}
+.status-strip{display:flex;height:100%;}
+.status-strip-a{background:#1565C0;border-radius:99px 0 0 99px;transition:width .6s cubic-bezier(.4,0,.2,1);}
+.status-strip-b{background:#F57C00;border-radius:0 99px 99px 0;flex:1;}
+
 /* ===== MOBILE ===== */
 @media(max-width:900px){
   .sidebar{transform:translateX(-100%);}
@@ -277,6 +325,8 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
   .refresh-btn{padding:7px 9px;}
   /* Chart */
   .prov-chart-wrap{height:300px;}
+  .map-side-grid{grid-template-columns:1fr;}
+  .map-wrap{height:240px;}
   /* Tabel scroll hint */
   .table-wrap{-webkit-overflow-scrolling:touch;}
   /* Eksplorasi stats wrap */
@@ -310,7 +360,7 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
 <!-- LOADING SCREEN -->
 <div id="loading-screen">
   <div class="ls-logo">
-    <img src="logo-erapor.png" alt="e-Rapor SMA" class="ls-logo-img">
+    <img src="https://cdn.jsdelivr.net/gh/kurikulumsma/eraporsma@main/logo-erapor.png" alt="e-Rapor SMA" class="ls-logo-img">
     <div style="text-align:center">
       <div class="ls-logo-name">e-Rapor SMA</div>
       <div class="ls-logo-sub">Dashboard Pengguna — Kemendikdasmen</div>
@@ -333,7 +383,7 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-brand">
-        <img src="logo-erapor.png" alt="" class="sidebar-brand-logo">
+        <img src="https://cdn.jsdelivr.net/gh/kurikulumsma/eraporsma@main/logo-erapor.png" alt="" class="sidebar-brand-logo">
         <div>
           <div class="sidebar-brand-text">e-Rapor SMA</div>
           <div class="sidebar-brand-sub">Kemendikdasmen</div>
@@ -436,30 +486,79 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
         <div class="t-pagination" id="pag-terbaru"></div>
       </div>
 
-      <!-- 3. Chart provinsi memanjang -->
+      <!-- 3. Peta choropleth + kolom kanan -->
+      <div class="map-side-grid" id="map-side-grid">
+
+        <!-- Peta -->
+        <div class="map-card">
+          <div class="map-card-header">
+            <div>
+              <div class="chart-title">Peta Penggunaan e-Rapor per Provinsi</div>
+              <div class="chart-sub" style="margin-bottom:0">Persentase sekolah yang sudah menggunakan e-Rapor</div>
+            </div>
+            <div class="map-avg-badge" id="map-avg-badge">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              Rata-rata Nasional: <span id="map-avg-val">–</span>
+            </div>
+          </div>
+          <div class="map-wrap" id="map-wrap"></div>
+          <div class="map-legend">
+            <div style="flex:1;min-width:180px">
+              <div class="map-legend-bar"></div>
+              <div class="map-legend-labels"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+            </div>
+            <div class="map-legend-nodata"><div class="map-legend-nodata-box"></div>Data tidak tersedia</div>
+          </div>
+        </div>
+
+        <!-- Kolom kanan -->
+        <div class="map-side-col">
+          <!-- Tren Penggunaan -->
+          <div class="chart-card">
+            <div class="chart-title">Tren Penggunaan</div>
+            <div class="chart-sub">Tahun pertama sekolah mendaftar</div>
+            <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
+          </div>
+          <!-- Status Sekolah: stat card + strip -->
+          <div class="status-card" id="status-card">
+            <div class="status-title">Status Sekolah</div>
+            <div class="status-sub">Pengguna Negeri vs Swasta</div>
+            <div class="status-rows" id="status-rows">
+              <div class="status-row">
+                <div class="status-row-top">
+                  <div class="status-row-label"><div class="status-dot" style="background:#1565C0"></div>Negeri</div>
+                  <div class="status-row-nums">
+                    <div class="status-row-pct" id="status-negeri-pct" style="color:#1565C0">–</div>
+                    <div class="status-row-count" id="status-negeri-count">–</div>
+                  </div>
+                </div>
+              </div>
+              <div class="status-row">
+                <div class="status-row-top">
+                  <div class="status-row-label"><div class="status-dot" style="background:#F57C00"></div>Swasta</div>
+                  <div class="status-row-nums">
+                    <div class="status-row-pct" id="status-swasta-pct" style="color:#F57C00">–</div>
+                    <div class="status-row-count" id="status-swasta-count">–</div>
+                  </div>
+                </div>
+              </div>
+              <div class="status-strip-wrap">
+                <div class="status-strip">
+                  <div class="status-strip-a" id="status-strip-a" style="width:50%"></div>
+                  <div class="status-strip-b"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 4. Chart provinsi bar 100% stacked -->
       <div class="chart-card" style="margin-bottom:18px" id="chart-prov-wrap">
         <div class="chart-title">Persentase Pengguna per Provinsi</div>
         <div class="chart-sub" id="chart-prov-sub">38 Provinsi — diurutkan berdasarkan capaian tertinggi</div>
         <div class="prov-chart-wrap"><canvas id="chart-provinsi"></canvas></div>
-      </div>
-
-      <!-- 4. 3 Chart kecil 33% masing2 -->
-      <div class="charts-grid">
-        <div class="chart-card">
-          <div class="chart-title">Tren Penggunaan</div>
-          <div class="chart-sub">Tahun pertama sekolah mendaftar</div>
-          <div class="chart-wrap"><canvas id="chart-trend"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Status Sekolah</div>
-          <div class="chart-sub">Pengguna Negeri vs Swasta</div>
-          <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
-        </div>
-        <div class="chart-card">
-          <div class="chart-title">Distribusi Versi</div>
-          <div class="chart-sub">Versi e-Rapor yang digunakan</div>
-          <div class="chart-wrap"><canvas id="chart-versi"></canvas></div>
-        </div>
       </div>
 
     </div><!-- /page-ringkasan -->
@@ -541,8 +640,9 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
   </main>
 </div>
 
+<div id="map-tooltip" class="map-tooltip"></div>
+
 <script>
-// ============================================================ CONFIG
 const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxI1Zl-tb_mi7nF-AShP40a25x9_ms9rn7bcGuM4WXl1YVXvL8l9UQ7wT8Xj-GeaVwo/exec";
 const SECRET_TOKEN    = "cZbNonESkRBzp5RLYXlXCk03PQg2FRtj";
 const PER_PAGE        = 15;
@@ -556,7 +656,7 @@ let pageSekolah  = 1;
 let eksplProv    = null;
 let eksplKab     = null;
 let eksplSekolahList = [];
-let chartTrend, chartVersi, chartStatus, chartProv;
+let chartTrend, chartProv;
 
 // ============================================================ SIDEBAR
 function toggleSidebar(){ const sb=document.getElementById('sidebar'); sb.classList.contains('open')?closeSidebar():openSidebar(); }
@@ -695,7 +795,8 @@ function onFbChange(){
 
   buildCards();
   buildProvChart();   // chart provinsi selalu rebuild ikut filter
-  buildSmallCharts(); // 3 chart kecil ikut filter
+  buildSmallCharts(); // chart kecil ikut filter
+  rerenderMap();
   renderTerbaru();
 }
 
@@ -710,6 +811,7 @@ function resetFb(){
   buildCards();
   buildProvChart();
   buildSmallCharts();
+  rerenderMap();
   renderTerbaru();
 }
 
@@ -735,8 +837,22 @@ function buildCards(){
   const prov=document.getElementById('fb-prov').value;
   const kab=document.getElementById('fb-kab').value;
   const sub=kab?kab:prov?prov:'SMA se-Indonesia';
+
+  // Hitung delta bulan ini
+  const now=new Date();
+  const y=now.getFullYear(), m=now.getMonth();
+  const deltaMonth=pengguna.filter(d=>{
+    if(!d.timestamp) return false;
+    const t=new Date(d.timestamp);
+    return t.getFullYear()===y && t.getMonth()===m;
+  }).length;
+  const deltaBadge=deltaMonth>0
+    ?`<span style="display:inline-flex;align-items:center;gap:3px;margin-left:7px;font-size:10px;font-weight:700;color:rgba(255,255,255,.9)">
+        <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>+${fmtNum(deltaMonth)} bulan ini
+      </span>`
+    :'';
+
   const r=24, cx=30, cy=30, circ=2*Math.PI*r;
-  // stroke-dashoffset negatif = geser start point ke atas (jam 12), searah jarum jam
   function ring(pct){
     const dash=(pct/100)*circ;
     return`<svg width="60" height="60" viewBox="0 0 60 60">
@@ -764,7 +880,7 @@ function buildCards(){
       <div class="sum-card-data">
         <div class="sum-card-label">Pengguna e-Rapor</div>
         <div class="sum-card-value">${fmtNum(used)}</div>
-        <div class="sum-card-sub">${pU}% dari total sekolah</div>
+        <div class="sum-card-sub" style="display:flex;align-items:center;flex-wrap:wrap">${pU}% dari total sekolah${deltaBadge}</div>
       </div>
     </div>
     <div class="sum-card notyet">
@@ -778,7 +894,7 @@ function buildCards(){
 }
 
 // ============================================================ CHARTS
-function buildCharts(){ buildProvChart(); buildSmallCharts(); }
+function buildCharts(){ buildProvChart(); buildSmallCharts(); buildMap(); }
 
 // Ambil data yang sudah difilter untuk chart kecil
 function getFilteredDapodik(){
@@ -797,8 +913,7 @@ function buildSmallCharts(){
   const data=getFilteredDapodik();
   const pengguna=data.filter(d=>d.pakai);
   buildTrendChart(pengguna);
-  buildVersiChart(pengguna);
-  buildStatusChart(pengguna);
+  buildStatusCard(pengguna);
 }
 
 function buildTrendChart(pengguna){
@@ -847,45 +962,211 @@ function buildTrendChart(pengguna){
   });
 }
 
-function buildVersiChart(pengguna){
-  const v2025=pengguna.filter(d=>d.versi&&d.versi.includes('2025')).length;
-  const v232=pengguna.filter(d=>d.versi&&d.versi.includes('23')).length;
-  const other=pengguna.length-v2025-v232;
-  if(chartVersi) chartVersi.destroy();
-  chartVersi=new Chart(document.getElementById('chart-versi'),{
-    type:'doughnut',
-    data:{labels:['Versi 2025','Versi 23.2','Lainnya'],datasets:[{data:[v2025,v232,other],backgroundColor:['#2E7D32','#6A1B9A','#9CA3AF'],borderWidth:0,hoverOffset:5}]},
-    options:{responsive:true,maintainAspectRatio:true,cutout:'65%',plugins:{legend:{position:'bottom',labels:{font:{size:11},padding:10}}}}
-  });
-}
-
-function buildStatusChart(pengguna){
-  // Status dari Dapodik — sudah ada di field d.status yang diset dari processData
+function buildStatusCard(pengguna){
   const negeri=pengguna.filter(d=>d.status==='Negeri').length;
   const swasta=pengguna.filter(d=>d.status==='Swasta').length;
-  if(chartStatus) chartStatus.destroy();
-  chartStatus=new Chart(document.getElementById('chart-status'),{
-    type:'doughnut',
-    data:{
-      labels:['Negeri','Swasta'],
-      datasets:[{
-        data:[negeri,swasta],
-        backgroundColor:['#1565C0','#F57C00'],
-        borderWidth:0,hoverOffset:5
-      }]
-    },
-    options:{
-      responsive:true,maintainAspectRatio:true,cutout:'65%',
-      plugins:{
-        legend:{position:'bottom',labels:{font:{size:11},padding:10}},
-        tooltip:{callbacks:{label:ctx3=>{
-          const tot=negeri+swasta;
-          const pct=tot?((ctx3.parsed/tot)*100).toFixed(1):0;
-          return` ${fmtNum(ctx3.parsed)} sekolah (${pct}%)`;
-        }}}
-      }
-    }
+  const tot=negeri+swasta;
+  const pN=tot?+((negeri/tot)*100).toFixed(1):0;
+  const pS=tot?+((swasta/tot)*100).toFixed(1):0;
+  document.getElementById('status-negeri-pct').textContent=pN+'%';
+  document.getElementById('status-negeri-count').textContent=fmtNum(negeri)+' sekolah';
+  document.getElementById('status-swasta-pct').textContent=pS+'%';
+  document.getElementById('status-swasta-count').textContent=fmtNum(swasta)+' sekolah';
+  document.getElementById('status-strip-a').style.width=pN+'%';
+}
+
+// ============================================================ DEBUG HELPER
+window.debugPeta=function(){
+  if(!cachedGeoJSON){ console.warn('GeoJSON belum loaded'); return; }
+  const f=cachedGeoJSON.features[0];
+  console.log('=== GEOJSON PROPERTIES SAMPLE ===');
+  console.log('Keys:', Object.keys(f.properties));
+  console.log('Values:', f.properties);
+  console.log('');
+  console.log('=== SEMUA NAMA DI GEOJSON ===');
+  cachedGeoJSON.features.forEach(feat=>{
+    const p=feat.properties;
+    console.log(JSON.stringify(p));
   });
+  console.log('');
+  console.log('=== NAMA PROVINSI DI DAPODIK ===');
+  const provNames=[...new Set(allDapodik.map(d=>d.provinsi).filter(Boolean))].sort();
+  console.log(provNames);
+};
+// GeoJSON: superpikar/indonesia-geojson, field: "Propinsi" (UPPERCASE, format BAKOSURTANAL lama)
+const GEO_TO_DAPODIK = {
+  'DI. ACEH':'Aceh','ACEH':'Aceh',
+  'BALI':'Bali',
+  'PROBANTEN':'Banten','BANTEN':'Banten',
+  'BENGKULU':'Bengkulu',
+  'DAERAH ISTIMEWA YOGYAKARTA':'D.I. Yogyakarta','YOGYAKARTA':'D.I. Yogyakarta',
+  'DKI JAKARTA':'D.K.I. Jakarta','JAKARTA':'D.K.I. Jakarta',
+  'GORONTALO':'Gorontalo',
+  'JAMBI':'Jambi',
+  'JAWA BARAT':'Jawa Barat',
+  'JAWA TENGAH':'Jawa Tengah',
+  'JAWA TIMUR':'Jawa Timur',
+  'KALIMANTAN BARAT':'Kalimantan Barat',
+  'KALIMANTAN SELATAN':'Kalimantan Selatan',
+  'KALIMANTAN TENGAH':'Kalimantan Tengah',
+  'KALIMANTAN TIMUR':'Kalimantan Timur',
+  'BANGKA BELITUNG':'Kepulauan Bangka Belitung',
+  'LAMPUNG':'Lampung',
+  'MALUKU':'Maluku',
+  'MALUKU UTARA':'Maluku Utara',
+  'NUSATENGGARA BARAT':'Nusa Tenggara Barat','NUSA TENGGARA BARAT':'Nusa Tenggara Barat',
+  'NUSA TENGGARA TIMUR':'Nusa Tenggara Timur',
+  'IRIAN JAYA TIMUR':'Papua','IRIAN JAYA TENGAH':'Papua',
+  'IRIAN JAYA BARAT':'Papua Barat','PAPUA BARAT':'Papua Barat',
+  'PAPUA':'Papua',
+  'RIAU':'Riau',
+  'SULAWESI SELATAN':'Sulawesi Selatan',
+  'SULAWESI TENGAH':'Sulawesi Tengah',
+  'SULAWESI TENGGARA':'Sulawesi Tenggara',
+  'SULAWESI UTARA':'Sulawesi Utara',
+  'SUMATERA BARAT':'Sumatera Barat',
+  'SUMATERA SELATAN':'Sumatera Selatan',
+  'SUMATERA UTARA':'Sumatera Utara',
+};
+
+// Provinsi Dapodik yang tidak punya polygon sendiri → gabung ke induk untuk peta
+const DAPODIK_MERGE = {
+  'Papua Selatan':'Papua','Papua Tengah':'Papua',
+  'Papua Pegunungan':'Papua','Papua Barat Daya':'Papua Barat',
+  'Kalimantan Utara':'Kalimantan Timur',
+  'Kepulauan Riau':'Riau',
+  'Sulawesi Barat':'Sulawesi Selatan',
+};
+
+let leafletMap = null;
+let leafletGeoLayer = null;
+let cachedGeoJSON = null;
+
+function pctToColor(pct){
+  if(pct===null||pct===undefined) return '#E5E7EB';
+  const t=pct/100;
+  const r=Math.round(219+(19-219)*t);
+  const g=Math.round(234+(56-234)*t);
+  const b=Math.round(254+(168-254)*t);
+  return`rgb(${r},${g},${b})`;
+}
+
+async function buildMap(){
+  if(!leafletMap){
+    leafletMap=L.map('map-wrap',{
+      center:[-2.5,118],zoom:5,
+      zoomControl:true,scrollWheelZoom:false,attributionControl:true,
+    });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png',{
+      attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains:'abcd',maxZoom:10,
+    }).addTo(leafletMap);
+  }
+  if(!cachedGeoJSON){
+    try{
+      const res=await fetch('https://cdn.jsdelivr.net/gh/superpikar/indonesia-geojson@master/indonesia-province-simple.json');
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      cachedGeoJSON=await res.json();
+      // Fit ke bounding box Indonesia setelah GeoJSON loaded
+      const tmpLayer=L.geoJSON(cachedGeoJSON);
+      leafletMap.fitBounds(tmpLayer.getBounds(),{padding:[6,6]});
+    }catch(e){
+      console.error('Gagal load GeoJSON:',e);
+      return;
+    }
+  }
+  rerenderMap();
+}
+
+function rerenderMap(){
+  if(!leafletMap||!cachedGeoJSON) return;
+
+  const stat=document.getElementById('fb-status').value;
+  let src=allDapodik;
+  if(stat) src=src.filter(d=>d.status===stat);
+
+  // Hitung data mentah per provinsi Dapodik
+  const rawData={};
+  src.forEach(d=>{
+    if(!d.provinsi) return;
+    if(!rawData[d.provinsi]) rawData[d.provinsi]={used:0,total:0};
+    rawData[d.provinsi].total++;
+    if(d.pakai) rawData[d.provinsi].used++;
+  });
+
+  // Gabungkan provinsi pemekaran ke induknya untuk peta
+  const provData={};
+  Object.entries(rawData).forEach(([prov,val])=>{
+    const target=DAPODIK_MERGE[prov]||prov;
+    if(!provData[target]) provData[target]={used:0,total:0,merged:[]};
+    provData[target].used+=val.used;
+    provData[target].total+=val.total;
+    if(DAPODIK_MERGE[prov]) provData[target].merged.push(prov);
+  });
+  Object.values(provData).forEach(v=>{ v.pct=v.total?+((v.used/v.total)*100).toFixed(1):null; });
+
+  const totAll=src.length, usedAll=src.filter(d=>d.pakai).length;
+  const avgNas=totAll?+((usedAll/totAll)*100).toFixed(1):0;
+  document.getElementById('map-avg-val').textContent=avgNas+'%';
+
+  if(leafletGeoLayer){ leafletMap.removeLayer(leafletGeoLayer); leafletGeoLayer=null; }
+
+  const activeProv=document.getElementById('fb-prov').value;
+  const tip=document.getElementById('map-tooltip');
+
+  function resolveProvName(props){
+    const raw=(props.Propinsi||props.state||props.province||props.name||'').trim().toUpperCase();
+    if(!raw) return '';
+    if(GEO_TO_DAPODIK[raw]) return GEO_TO_DAPODIK[raw];
+    const norm=raw.replace(/\./g,'').replace(/\s+/g,' ');
+    const found=Object.keys(provData).find(k=>
+      k.toUpperCase().replace(/\./g,'').replace(/\s+/g,' ')===norm
+    );
+    return found||'';
+  }
+
+  leafletGeoLayer=L.geoJSON(cachedGeoJSON,{
+    style(feature){
+      const dapodikName=resolveProvName(feature.properties);
+      const d=provData[dapodikName];
+      const isActive=!activeProv||(activeProv===dapodikName)||
+        (DAPODIK_MERGE[activeProv]===dapodikName);
+      return{
+        fillColor:d?pctToColor(d.pct):'#E5E7EB',
+        fillOpacity:isActive?0.82:0.25,
+        color:'white',weight:1,
+      };
+    },
+    onEachFeature(feature,layer){
+      const dapodikName=resolveProvName(feature.properties);
+      const d=provData[dapodikName];
+      layer.on({
+        mousemove(e){
+          tip.style.display='block';
+          tip.style.left=(e.originalEvent.clientX+14)+'px';
+          tip.style.top=(e.originalEvent.clientY-10)+'px';
+          const mergeNote=d&&d.merged&&d.merged.length
+            ?`<div class="map-tooltip-row" style="opacity:.55;font-size:10px">termasuk: ${d.merged.join(', ')}</div>`:''
+          tip.innerHTML=`<div class="map-tooltip-name">${dapodikName}</div>`+
+            (d?`<div class="map-tooltip-row"><span>Pengguna</span><span>${fmtNum(d.used)} sekolah</span></div>`+
+               `<div class="map-tooltip-row"><span>Total</span><span>${fmtNum(d.total)} sekolah</span></div>`+
+               `<div class="map-tooltip-row"><span>Capaian</span><span style="font-weight:700;color:#93C5FD">${d.pct}%</span></div>`+
+               mergeNote
+            :'<div class="map-tooltip-row" style="opacity:.6">Data tidak tersedia</div>');
+          layer.setStyle({weight:2,color:'#FFD54F'});
+        },
+        mouseout(){
+          tip.style.display='none';
+          leafletGeoLayer.resetStyle(layer);
+        },
+        click(){
+          const provEl=document.getElementById('fb-prov');
+          if(provEl.value===dapodikName){ resetFb(); }
+          else{ provEl.value=dapodikName; onFbChange(); window.scrollTo({top:0,behavior:'smooth'}); }
+        }
+      });
+    }
+  }).addTo(leafletMap);
 }
 
 function buildProvChart(){
