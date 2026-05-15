@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard e-Rapor SMA v6</title>
+<title>Dashboard e-Rapor SMA v7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -143,7 +143,7 @@ tr.row-highlight td.nama{color:#92400E!important;}
 
 /* ===== CHART CARDS ===== */
 .charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:18px;}
-.chart-card{background:var(--card);border-radius:var(--radius);padding:16px;}
+.chart-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;}
 .chart-card.c2{grid-column:span 2;}
 .chart-card.c3{grid-column:span 3;}
 .chart-title{font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:2px;}
@@ -161,7 +161,7 @@ tr.row-highlight td.nama{color:#92400E!important;}
 }
 
 /* ===== TABEL UMUM ===== */
-.table-card{background:var(--card);border-radius:var(--radius);margin-bottom:18px;overflow:hidden;}
+.table-card{background:var(--card);border-radius:var(--radius);margin-bottom:18px;overflow:hidden;border:1px solid #E5E7EB;}
 .t-head-row{padding:15px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .t-title{font-size:13px;font-weight:700;color:var(--text-900);}
 .t-count{font-size:11px;color:var(--text-400);margin-top:2px;}
@@ -215,7 +215,7 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
 .bc-sep{color:var(--text-300);font-size:13px;}
 
 /* Eksplorasi level card */
-.eksp-card{background:var(--card);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;}
+.eksp-card{background:var(--card);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;border:1px solid #E5E7EB;}
 .eksp-card-header{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #F1F5F9;gap:12px;flex-wrap:wrap;}
 .eksp-card-title{font-size:13px;font-weight:700;color:var(--text-900);}
 .eksp-card-sub{font-size:11px;color:var(--text-400);margin-top:2px;}
@@ -356,10 +356,7 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
         Rincian Data
       </div>
     </nav>
-    <div class="sidebar-footer">
-      <div>Terakhir diperbarui</div>
-      <div id="last-updated">–</div>
-    </div>
+  
   </aside>
 
   <main class="main">
@@ -602,7 +599,6 @@ async function loadData(isRefresh=false){
   setProgress(100,'Dashboard siap!');
   await delay(350);
   const updStr=new Date(raw.updated).toLocaleString('id-ID',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
-  document.getElementById('last-updated').textContent=updStr;
   document.getElementById('period-text').textContent=updStr;
   document.getElementById('period-badge').style.display='flex';
   document.getElementById('loading-screen').classList.add('hide');
@@ -901,8 +897,7 @@ function buildProvChart(){
   const sub=prov?(kab?`${prov} — ${kab}`:`Provinsi ${prov}`):'38 Provinsi — diurutkan berdasarkan capaian tertinggi';
   document.getElementById('chart-prov-sub').textContent=sub;
 
-  // Hitung per provinsi dari data terfilter (status saja, bukan wilayah — karena kita tetap tampilkan semua prov)
-  // Kalau filter provinsi aktif, fokus ke satu provinsi saja tapi tetap tampil
+  // Hitung per provinsi (filter status saja, bukan wilayah)
   let sourceData=allDapodik;
   if(stat) sourceData=allDapodik.filter(d=>d.status===stat);
 
@@ -915,42 +910,45 @@ function buildProvChart(){
   });
 
   let sorted=Object.entries(map)
-    .map(([p,v])=>({p,pct:v.total?+((v.used/v.total)*100).toFixed(1):0,used:v.used,total:v.total}))
+    .map(([p,v])=>({p,pct:v.total?+((v.used/v.total)*100).toFixed(1):0,used:v.used,total:v.total,notUsed:v.total-v.used}))
     .sort((a,b)=>b.pct-a.pct);
 
-  // Kalau filter provinsi aktif, highlight provinsi itu saja
   const activeProv=prov||null;
 
-  // Warna: bar gradien canvas via createLinearGradient — pakai plugin
   if(chartProv) chartProv.destroy();
 
   const canvas=document.getElementById('chart-provinsi');
-  const ctx=canvas.getContext('2d');
 
-  // Buat array warna: aktif=gradien biru, tidak aktif kalau ada filter=abu muda, kalau tidak ada filter semua biru gradien
-  const bgColors=sorted.map(e=>{
-    if(activeProv && e.p!==activeProv) return 'rgba(200,210,220,.35)';
-    return 'bar-gradient'; // placeholder, diganti pakai plugin
-  });
+  // Warna per bar: aktif=biru penuh, tidak aktif=lebih pucat
+  const usedBg=sorted.map(e=>activeProv&&e.p!==activeProv?'rgba(180,205,230,.5)':'#1976D2');
+  const usedHover=sorted.map(e=>activeProv&&e.p!==activeProv?'rgba(160,190,215,.7)':'#1338A8');
+  const notBg=sorted.map(e=>activeProv&&e.p!==activeProv?'rgba(220,225,230,.35)':'#CBD5E1');
+  const notHover=sorted.map(e=>activeProv&&e.p!==activeProv?'rgba(210,215,220,.5)':'#94A3B8');
 
   chartProv=new Chart(canvas,{
     type:'bar',
     data:{
       labels:sorted.map(e=>e.p),
-      datasets:[{
-        label:'% Pengguna',
-        data:sorted.map(e=>e.pct),
-        backgroundColor:sorted.map(e=>{
-          if(activeProv && e.p!==activeProv) return 'rgba(200,215,228,.4)';
-          return '#1976D2';
-        }),
-        hoverBackgroundColor:sorted.map(e=>{
-          if(activeProv && e.p!==activeProv) return 'rgba(200,215,228,.55)';
-          return '#1338A8'; // sedikit lebih gelap saat hover tapi kembali ke normal
-        }),
-        borderRadius:3,
-        borderSkipped:false,
-      }]
+      datasets:[
+        {
+          label:'Pengguna',
+          data:sorted.map(e=>e.pct),
+          backgroundColor:usedBg,
+          hoverBackgroundColor:usedHover,
+          borderRadius:0,
+          borderSkipped:false,
+          stack:'s',
+        },
+        {
+          label:'Belum Pakai',
+          data:sorted.map(e=>+(100-e.pct).toFixed(1)),
+          backgroundColor:notBg,
+          hoverBackgroundColor:notHover,
+          borderRadius:0,
+          borderSkipped:false,
+          stack:'s',
+        }
+      ]
     },
     options:{
       responsive:true,
@@ -962,26 +960,42 @@ function buildProvChart(){
         if(!elements.length) return;
         const idx=elements[0].index;
         const clickedProv=sorted[idx].p;
-        // Aktifkan filter provinsi
         const provEl=document.getElementById('fb-prov');
         if(provEl.value===clickedProv){
-          // Klik provinsi yang sama → reset
           resetFb();
         } else {
           provEl.value=clickedProv;
           onFbChange();
-          // Scroll ke atas supaya filter bar & tabel terlihat
           window.scrollTo({top:0,behavior:'smooth'});
         }
       },
       plugins:{
-        legend:{display:false},
+        legend:{
+          display:true,
+          position:'top',
+          align:'end',
+          labels:{
+            font:{size:11},
+            boxWidth:12,
+            boxHeight:12,
+            padding:14,
+            color:'#6B7280',
+            usePointStyle:false,
+            generateLabels(chart){
+              return[
+                {text:'Pengguna',fillStyle:'#1976D2',strokeStyle:'#1976D2',lineWidth:0,index:0},
+                {text:'Belum Pakai',fillStyle:'#CBD5E1',strokeStyle:'#CBD5E1',lineWidth:0,index:1},
+              ];
+            }
+          }
+        },
         tooltip:{
           callbacks:{
             title:ctx2=>ctx2[0].label,
             label:ctx2=>{
               const d=sorted[ctx2.dataIndex];
-              return[` ${d.pct}%`,` ${fmtNum(d.used)} pengguna dari ${fmtNum(d.total)} sekolah`];
+              if(ctx2.datasetIndex===0) return` Pengguna: ${fmtNum(d.used)} sekolah (${d.pct}%)`;
+              return` Belum Pakai: ${fmtNum(d.notUsed)} sekolah (${(100-d.pct).toFixed(1)}%)`;
             },
             footer:()=>'  Klik untuk filter provinsi ini'
           }
@@ -989,51 +1003,18 @@ function buildProvChart(){
       },
       scales:{
         x:{
-          grid:{color:'rgba(241,245,249,.8)'},
+          stacked:true,
+          grid:{display:false},
           ticks:{font:{size:10},maxRotation:45,minRotation:35,color:'#6B7280'}
         },
         y:{
+          stacked:true,
           beginAtZero:true,max:100,
           grid:{color:'rgba(241,245,249,.8)'},
           ticks:{font:{size:10},callback:v=>v+'%',color:'#6B7280'}
         }
       }
-    },
-    plugins:[{
-      id:'gradientBars',
-      afterLayout(chart){
-        const{ctx:c,chartArea,scales}=chart;
-        if(!chartArea) return;
-        const ds=chart.data.datasets[0];
-        const meta=chart.getDatasetMeta(0);
-        const newBg=[], newHover=[];
-        meta.data.forEach((bar,i)=>{
-          const orig=sorted[i];
-          if(activeProv && orig.p!==activeProv){
-            newBg.push('rgba(200,215,228,.4)');
-            newHover.push('rgba(180,200,215,.6)');
-            return;
-          }
-          const y0=bar.y, y1=scales.y.getPixelForValue(0);
-          if(!isFinite(y0)||!isFinite(y1)){
-            newBg.push('#1976D2');
-            newHover.push('#1338A8');
-            return;
-          }
-          const grad=c.createLinearGradient(0,y0,0,y1);
-          grad.addColorStop(0,'#42A5F5');
-          grad.addColorStop(1,'#0D2B6E');
-          newBg.push(grad);
-          // Hover sedikit lebih terang
-          const gradH=c.createLinearGradient(0,y0,0,y1);
-          gradH.addColorStop(0,'#64B5F6');
-          gradH.addColorStop(1,'#1338A8');
-          newHover.push(gradH);
-        });
-        ds.backgroundColor=newBg;
-        ds.hoverBackgroundColor=newHover;
-      }
-    }]
+    }
   });
 }
 
