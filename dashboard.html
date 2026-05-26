@@ -27,7 +27,7 @@
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
-body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text-900);min-height:100vh;font-size:14px;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text-900);min-height:100vh;font-size:14px;overflow-x:hidden;}
 
 /* ===== LOADING ===== */
 #loading-screen{
@@ -64,10 +64,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .sidebar{
   width:var(--sidebar-w);flex-shrink:0;background:var(--blue-900);
   display:flex;flex-direction:column;
-  position:fixed;top:0;left:0;bottom:0;z-index:200;
+  position:fixed;top:0;left:0;bottom:0;z-index:400;
   transition:transform .3s cubic-bezier(.4,0,.2,1);
 }
 .sidebar-header{padding:18px 16px 16px;border-bottom:1px solid rgba(255,255,255,.08);}
+.sidebar-close-btn{display:none;width:30px;height:30px;border-radius:8px;background:rgba(255,255,255,.1);border:none;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .2s;margin-left:auto;}
+.sidebar-close-btn:hover{background:rgba(255,255,255,.2);}
 .sidebar-brand{display:flex;align-items:center;gap:10px;}
 .sidebar-brand-logo{width:72px;height:auto;opacity:.92;flex-shrink:0;}
 .sidebar-brand-text{color:white;font-size:13px;font-weight:800;line-height:1.2;letter-spacing:-.3px;}
@@ -87,11 +89,11 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(-
 .nav-item.active svg,.nav-item:hover svg{opacity:1;}
 .sidebar-footer{padding:14px 16px;border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.35);font-size:11px;line-height:1.6;}
 #last-updated{color:rgba(255,255,255,.6);font-weight:600;}
-.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;opacity:0;transition:opacity .3s;}
-.sidebar-overlay.show{opacity:1;}
+.sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:350;opacity:0;transition:opacity .3s;pointer-events:none;}
+.sidebar-overlay.show{opacity:1;pointer-events:auto;}
 
 /* ===== MAIN ===== */
-.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;}
+.main{margin-left:var(--sidebar-w);flex:1;display:flex;flex-direction:column;min-height:100vh;overflow-x:hidden;min-width:0;}
 .topbar{
   background:white;padding:11px 22px;
   display:flex;align-items:center;justify-content:space-between;
@@ -146,7 +148,8 @@ tr.row-highlight td.nama{color:#92400E!important;}
 
 /* ===== CHART CARDS ===== */
 .charts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-bottom:18px;}
-.chart-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;}
+.chart-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;transition:border-color .2s;overflow:hidden;}
+.chart-card:hover{border-color:var(--blue-400);}
 .chart-card.c2{grid-column:span 2;}
 .chart-card.c3{grid-column:span 3;}
 .chart-title{font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:2px;}
@@ -165,7 +168,8 @@ tr.row-highlight td.nama{color:#92400E!important;}
 }
 
 /* ===== TABEL UMUM ===== */
-.table-card{background:var(--card);border-radius:var(--radius);margin-bottom:18px;overflow:hidden;border:1px solid #E5E7EB;}
+.table-card{background:var(--card);border-radius:var(--radius);margin-bottom:18px;overflow:hidden;border:1px solid #E5E7EB;transition:border-color .2s;}
+.table-card:hover{border-color:var(--blue-400);}
 .t-head-row{padding:15px 16px 0;display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;}
 .t-title{font-size:13px;font-weight:700;color:var(--text-900);}
 .t-count{font-size:11px;color:var(--text-400);margin-top:2px;}
@@ -219,7 +223,8 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
 .bc-sep{color:var(--text-300);font-size:13px;}
 
 /* Eksplorasi level card */
-.eksp-card{background:var(--card);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;border:1px solid #E5E7EB;}
+.eksp-card{background:var(--card);border-radius:var(--radius);margin-bottom:14px;overflow:hidden;border:1px solid #E5E7EB;transition:border-color .2s;}
+.eksp-card:hover{border-color:var(--blue-400);}
 .eksp-card-header{padding:13px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #F1F5F9;gap:12px;flex-wrap:wrap;}
 .eksp-card-title{font-size:13px;font-weight:700;color:var(--text-900);}
 .eksp-card-sub{font-size:11px;color:var(--text-400);margin-top:2px;}
@@ -248,7 +253,8 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
 
 /* ===== PETA + LAYOUT BARU ===== */
 .map-side-grid{display:grid;grid-template-columns:2fr 1fr;gap:13px;margin-bottom:18px;align-items:start;}
-.map-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;position:relative;}
+.map-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;position:relative;transition:border-color .2s;}
+.map-card:hover{border-color:var(--blue-400);}
 .map-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:10px;flex-wrap:wrap;}
 .map-avg-badge{display:inline-flex;align-items:center;gap:5px;padding:5px 11px;border-radius:7px;background:var(--blue-50);border:1px solid var(--blue-100);font-size:12px;font-weight:700;color:var(--blue-700);white-space:nowrap;flex-shrink:0;}
 .map-wrap{width:100%;height:320px;position:relative;border-radius:10px;overflow:hidden;background:#EDF2F7;}
@@ -276,7 +282,8 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
 .map-side-col{display:flex;flex-direction:column;gap:13px;}
 
 /* Status card baru */
-.status-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;}
+.status-card{background:var(--card);border-radius:var(--radius);padding:16px;border:1px solid #E5E7EB;transition:border-color .2s;}
+.status-card:hover{border-color:var(--blue-400);}
 .status-title{font-size:13px;font-weight:700;color:var(--text-900);margin-bottom:2px;}
 .status-sub{font-size:11px;color:var(--text-400);margin-bottom:14px;}
 .status-rows{display:flex;flex-direction:column;gap:10px;}
@@ -296,7 +303,9 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
 @media(max-width:900px){
   .sidebar{transform:translateX(-100%);}
   .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,.18);}
-  .sidebar-overlay{display:block;}
+  .sidebar-overlay{display:block;pointer-events:none;}
+  .sidebar-overlay.show{pointer-events:auto;}
+  .sidebar-close-btn{display:flex;}
   .main{margin-left:0;}
   .hamburger-btn{display:flex;}
   .topbar{padding:10px 14px;}
@@ -327,6 +336,7 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
   .refresh-btn{padding:7px 9px;}
   /* Chart */
   .prov-chart-wrap{height:300px;}
+  .prov-chart-wrap canvas{min-width:600px;}
   .map-side-grid{grid-template-columns:1fr;}
   .map-wrap{height:240px;}
   /* Tabel scroll hint */
@@ -391,6 +401,11 @@ tbody td.nama{font-weight:600;color:var(--text-900);max-width:220px;}
           <div class="sidebar-brand-text">e-Rapor SMA</div>
           <div class="sidebar-brand-sub">Kemendikdasmen</div>
         </div>
+        <button class="sidebar-close-btn" onclick="closeSidebar()" aria-label="Tutup menu">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
       </div>
     </div>
     <nav class="sidebar-nav">
@@ -1240,7 +1255,7 @@ function buildProvChart(){
       ]
     },
     options:{
-      responsive:false,
+      responsive:true,
       maintainAspectRatio:false,
       onHover(evt,elements){
         evt.native.target.style.cursor=elements.length?'pointer':'default';
